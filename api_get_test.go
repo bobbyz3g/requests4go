@@ -1,11 +1,9 @@
 package requests4go
 
-import (
-	"testing"
-)
+import "testing"
 
 func TestBaseGet(t *testing.T) {
-	resp, err := Get("https://httpbin.org/get", nil)
+	resp, err := Get("http://httpbin.org/get", nil)
 	if err != nil {
 		t.Error(err)
 	}
