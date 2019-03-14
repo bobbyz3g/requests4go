@@ -7,6 +7,8 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/bitly/go-simplejson"
 )
 
 type Response struct {
@@ -125,4 +127,15 @@ func (r *Response) Content() ([]byte, error) {
 	}
 
 	return r.content.Bytes(), nil
+}
+
+// Json returns simplejson.Json.
+// See the usage of simplejson on https://godoc.org/github.com/bitly/go-simplejson.
+func (r *Response) Json() (*simplejson.Json, error) {
+	if r.internalError != nil {
+		return nil, r.internalError
+	}
+	reader := r.getContent()
+	defer r.Close()
+	return simplejson.NewFromReader(reader)
 }
