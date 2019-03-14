@@ -1,13 +1,17 @@
 package requests4go
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestBaseGet(t *testing.T) {
 	resp, err := Get("http://httpbin.org/get", nil)
+
 	if err != nil {
-		t.Error(err)
+		t.Errorf("Get error: excepted no error, got %v", err)
 	}
-	if resp.Status() != "200 OK" {
-		t.Error("Get error.")
+
+	if !resp.Ok() {
+		t.Errorf("Request got wrong response, excepted \"200 OK\", got \"%v\"", resp.Status)
 	}
 }

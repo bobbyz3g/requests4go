@@ -82,20 +82,21 @@ func sendRequest(method, reqUrl string, args *RequestArguments) (*Response, erro
 		req.Header.Set(k, v)
 	}
 
-	resp, err := args.Client.Do(req)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return &Response{resp}, nil
+	return NewResponse(args.Client.Do(req))
 }
 
 // prepareRequest prepares http.Request according to method, url and RequestArguments.
-func prepareRequest(method, originUrl string, args *RequestArguments) (*http.Request, error) {
-	reqUrl, err := prepareURL(originUrl, args.Params)
-	if err != nil {
-		return nil, err
+func prepareRequest(method, reqUrl string, args *RequestArguments) (*http.Request, error) {
+	var err error
+	switch {
+	case len(args.Params) != 0:
+		if reqUrl, err = prepareURL(reqUrl, args.Params); err != nil {
+			return nil, err
+		}
+	case args.ObjectParam != nil:
+		if reqUrl, err = prepareURLWithStruct(reqUrl, args.ObjectParam); err != nil {
+			return nil, err
+		}
 	}
 
 	req, err := http.NewRequest(method, reqUrl, nil)
