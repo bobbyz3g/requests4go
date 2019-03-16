@@ -1,6 +1,9 @@
 package requests4go
 
 import (
+	"bytes"
+	"encoding/json"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -16,7 +19,7 @@ type RequestArguments struct {
 	// Params is a map of URL query params in GET request.
 	Params map[string]string
 
-	// ObjectParam is a struct that encapsulates URL query params in GET request.
+	// ObjectParam is a struct that encapsulates URL query params within GET request.
 	ObjectParam interface{}
 
 	// Auth is basic HTTP authentication formatting the username and password in base64,
@@ -26,7 +29,11 @@ type RequestArguments struct {
 
 	Cookies []*http.Cookie
 
-	Json map[string]string
+	// Json can be []byte, string or struct.
+	// When you want to send a JSON within request, you can use it.
+	Json interface{}
+
+	Data map[string]string
 }
 
 var DefaultRequestArguments = &RequestArguments{
@@ -44,7 +51,6 @@ var DefaultRequestArguments = &RequestArguments{
 //   "Client", "Headers", "Params", "Auth", "Cookies", "Json".
 func NewRequestArguments(args map[string]interface{}) *RequestArguments {
 	a := DefaultRequestArguments
-
 	for k, v := range args {
 		switch k {
 		case "Client":
@@ -60,7 +66,7 @@ func NewRequestArguments(args map[string]interface{}) *RequestArguments {
 		case "Cookies":
 			a.Cookies = v.([]*http.Cookie)
 		case "Json":
-			a.Json = v.(map[string]string)
+			a.Json = v
 		}
 	}
 	return a
@@ -78,16 +84,13 @@ func sendRequest(method, reqUrl string, args *RequestArguments) (*Response, erro
 		return nil, err
 	}
 
-	for k, v := range args.Headers {
-		req.Header.Set(k, v)
-	}
-
 	return NewResponse(args.Client.Do(req))
 }
 
 // prepareRequest prepares http.Request according to method, url and RequestArguments.
 func prepareRequest(method, reqUrl string, args *RequestArguments) (*http.Request, error) {
 	var err error
+
 	switch {
 	case len(args.Params) != 0:
 		if reqUrl, err = prepareURL(reqUrl, args.Params); err != nil {
@@ -99,13 +102,47 @@ func prepareRequest(method, reqUrl string, args *RequestArguments) (*http.Reques
 		}
 	}
 
-	req, err := http.NewRequest(method, reqUrl, nil)
+	body, err := prepareBody(args)
+
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(method, reqUrl, body)
 
 	if args.Auth != nil {
 		req.SetBasicAuth(args.Auth[0], args.Auth[1])
 	}
 
+	for k, v := range args.Headers {
+		req.Header.Set(k, v)
+	}
 	return req, err
+}
+
+func prepareBody(args *RequestArguments) (io.Reader, error) {
+	if args.Json != nil {
+		args.Headers["Content-Type"] = defaultJsonType
+		return prepareJsonBody(args.Json)
+	}
+	return nil, nil
+}
+
+func prepareJsonBody(JSON interface{}) (io.Reader, error) {
+	var reader io.Reader
+	switch JSON.(type) {
+	case string:
+		reader = strings.NewReader(JSON.(string))
+	case []byte:
+		reader = bytes.NewReader(JSON.([]byte))
+	default:
+		byteS, err := json.Marshal(JSON)
+		if err != nil {
+			return nil, err
+		}
+		reader = bytes.NewReader(byteS)
+	}
+	return reader, nil
 }
 
 // prepareURL prepares new URL with url query params.
