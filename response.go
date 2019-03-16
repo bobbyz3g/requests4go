@@ -135,7 +135,10 @@ func (r *Response) Json() (*simplejson.Json, error) {
 	if r.internalError != nil {
 		return nil, r.internalError
 	}
-	reader := r.getContent()
-	defer r.Close()
-	return simplejson.NewFromReader(reader)
+	cnt, err := r.Content()
+	if err != nil {
+		r.internalError = err
+		return nil, err
+	}
+	return simplejson.NewJson(cnt)
 }
