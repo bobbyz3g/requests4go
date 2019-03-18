@@ -33,6 +33,8 @@ type RequestArguments struct {
 	// When you want to send a JSON within request, you can use it.
 	Json interface{}
 
+	// Data is a map stores the key values, will be converted into the body of
+	// Post request.
 	Data map[string]string
 }
 
@@ -120,14 +122,36 @@ func prepareRequest(method, reqUrl string, args *RequestArguments) (*http.Reques
 	return req, err
 }
 
+// prepareBody prepares the give HTTP body.
 func prepareBody(args *RequestArguments) (io.Reader, error) {
 	if args.Json != nil {
 		args.Headers["Content-Type"] = defaultJsonType
 		return prepareJsonBody(args.Json)
 	}
+
+	if args.Data != nil {
+		args.Headers["Content-Type"] = defaultContentType
+		return prepareDataBody(args.Data)
+	}
 	return nil, nil
 }
 
+// prepareDataBody prepares the given HTTP Data body.
+func prepareDataBody(data map[string]string) (io.Reader, error) {
+	reader := strings.NewReader(encodeParams(data))
+	return reader, nil
+}
+
+// encodeParams encodes parameters in a piece of data.
+func encodeParams(data map[string]string) string {
+	vs := &url.Values{}
+	for k, v := range data {
+		vs.Set(k, v)
+	}
+	return vs.Encode()
+}
+
+// prepareJsonBody prepares the give HTTP Json body.
 func prepareJsonBody(JSON interface{}) (io.Reader, error) {
 	var reader io.Reader
 	switch JSON.(type) {
