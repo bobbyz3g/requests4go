@@ -3,14 +3,11 @@ package requests4go
 import "testing"
 
 func TestResponse(t *testing.T) {
-
-	m := map[string]interface{}{
-		"Params": map[string]string{
-			"a": "1",
-			"b": "2",
-		},
+	args := DefaultRequestArguments
+	args.Params = map[string]string{
+		"a": "1",
+		"b": "2",
 	}
-	args := NewRequestArguments(m)
 	resp, err := Get("http://httpbin.org/get", args)
 
 	if err != nil {

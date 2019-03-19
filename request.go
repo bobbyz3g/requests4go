@@ -49,34 +49,6 @@ var DefaultRequestArguments = &RequestArguments{
 	Data:        nil,
 }
 
-// NewRequestArguments returns a new *RequestArguments with args.
-// Optional keys:
-//   "Client", "Headers", "Params", "Auth", "Cookies", "Json".
-func NewRequestArguments(args map[string]interface{}) *RequestArguments {
-	a := DefaultRequestArguments
-	for k, v := range args {
-		switch strings.ToLower(k) {
-		case "client":
-			a.Client = v.(*http.Client)
-		case "headers":
-			a.Headers = v.(map[string]string)
-		case "params":
-			a.Params = v.(map[string]string)
-		case "objectparam":
-			a.ObjectParam = v.(interface{})
-		case "auth":
-			a.Auth = v.([]string)
-		case "cookies":
-			a.Cookies = v.([]*http.Cookie)
-		case "json":
-			a.Json = v
-		case "data":
-			a.Data = v.(map[string]string)
-		}
-	}
-	return a
-}
-
 // sendRequest sends http request and returns the response.
 func sendRequest(method, reqUrl string, args *RequestArguments) (*Response, error) {
 	if args == nil {

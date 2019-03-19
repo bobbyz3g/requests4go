@@ -1,40 +1,8 @@
 package requests4go
 
 import (
-	"net/http"
 	"testing"
 )
-
-func TestNewRequestArguments(t *testing.T) {
-	a := struct {
-		a int
-		b int
-		c int
-	}{
-		1, 2, 3,
-	}
-	testArgs := map[string]interface{}{
-		"Client":      http.DefaultClient,
-		"Header":      defaultHeaders,
-		"ObjectParam": a,
-	}
-
-	args := NewRequestArguments(testArgs)
-
-	if args.Client != http.DefaultClient {
-		t.Error("NewRequestArguments Error")
-	}
-
-	if args.ObjectParam != a {
-		t.Error("NewRequestArguments Error")
-	}
-
-	for k, v := range args.Headers {
-		if defaultHeaders[k] != v {
-			t.Error("NewRequestArgument Headers Error")
-		}
-	}
-}
 
 func TestPrepareURl(t *testing.T) {
 	reqUrl, err := prepareURL("https://www.example.com/", map[string]string{"a": "1", "b": "2"})
