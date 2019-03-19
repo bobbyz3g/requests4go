@@ -27,7 +27,7 @@ func TestBaseJsonPost(t *testing.T) {
 	if name, _ := JSON.Get("json").Get("name").String(); jsonStruct.Name != name {
 		t.Errorf("Json value error: excepted %v, got %v", jsonStruct.Name, name)
 	}
-	if age, _ := JSON.Get("json").Get("name").Int(); jsonStruct.Age != age {
+	if age, _ := JSON.Get("json").Get("age").Int(); jsonStruct.Age != age {
 		t.Errorf("Json value error: excepted %v, got %v", jsonStruct.Age, age)
 	}
 }
