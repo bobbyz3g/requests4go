@@ -46,6 +46,7 @@ var DefaultRequestArguments = &RequestArguments{
 	Auth:        nil,
 	Cookies:     nil,
 	Json:        nil,
+	Data:        nil,
 }
 
 // NewRequestArguments returns a new *RequestArguments with args.
@@ -54,21 +55,23 @@ var DefaultRequestArguments = &RequestArguments{
 func NewRequestArguments(args map[string]interface{}) *RequestArguments {
 	a := DefaultRequestArguments
 	for k, v := range args {
-		switch k {
-		case "Client":
+		switch strings.ToLower(k) {
+		case "client":
 			a.Client = v.(*http.Client)
-		case "Headers":
+		case "headers":
 			a.Headers = v.(map[string]string)
-		case "Params":
+		case "params":
 			a.Params = v.(map[string]string)
-		case "ObjectParam":
+		case "objectparam":
 			a.ObjectParam = v.(interface{})
-		case "Auth":
+		case "auth":
 			a.Auth = v.([]string)
-		case "Cookies":
+		case "cookies":
 			a.Cookies = v.([]*http.Cookie)
-		case "Json":
+		case "json":
 			a.Json = v
+		case "data":
+			a.Data = v.(map[string]string)
 		}
 	}
 	return a
