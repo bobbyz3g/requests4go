@@ -1,6 +1,7 @@
 package requests4go
 
 import (
+	"os"
 	"testing"
 )
 
@@ -55,5 +56,53 @@ func TestBaseDataPost(t *testing.T) {
 
 	if age, _ := JSON.Get("form").Get("age").String(); age != args.Data["age"] {
 		t.Errorf("Json value error: excepted %v, got %v", args.Data["age"], age)
+	}
+}
+
+func TestBaseFilePost(t *testing.T) {
+	args := DefaultRequestArguments
+	f, err := os.Open("testdata/file4upload")
+
+	if err != nil {
+		t.Fatalf("Open file error: %v", err)
+	}
+
+	f2, err := os.Open("testdata/file2")
+
+	if err != nil {
+		t.Fatalf("Open file error: %v", err)
+	}
+
+	files := []FileField{
+		{
+			FileName:    "file4upload",
+			FieldName:   "file",
+			FileContent: f,
+		},
+		{
+			FileName:    "file2",
+			FieldName:   "file2",
+			FileContent: f2,
+		},
+	}
+
+	args.Files = files
+	resp, err := Post("http://www.httpbin.org/post", args)
+	if err != nil {
+		t.Errorf("Reqeust error: %v", err)
+	}
+	fString1 := "Hey, I am test file."
+	fString2 := "Hey, I am test file too."
+	JSON, err := resp.Json()
+	if err != nil {
+		t.Fatalf("Get response JSON error: %v", err)
+	}
+
+	if file1, _ := JSON.Get("files").Get("file").String(); file1 != fString1 {
+		t.Errorf("Post file error: excepted \"%v\", got \"%v\"", fString1, file1)
+	}
+
+	if file2, _ := JSON.Get("files").Get("file2").String(); file2 != fString2 {
+		t.Errorf("Post file error: excepted \"%v\", got \"%v\"", fString2, file2)
 	}
 }

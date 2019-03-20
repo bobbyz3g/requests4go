@@ -4,12 +4,23 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"strings"
 
 	"github.com/google/go-querystring/query"
 )
+
+type FileField struct {
+	// FileName specifies name of file that you wish to upload.
+	FileName string
+
+	// FieldName specifies form field name.
+	FieldName string
+
+	FileContent io.ReadCloser
+}
 
 type RequestArguments struct {
 	Client *http.Client
@@ -36,6 +47,9 @@ type RequestArguments struct {
 	// Data is a map stores the key values, will be converted into the body of
 	// Post request.
 	Data map[string]string
+
+	// Files specifies the files you wish to post.
+	Files []FileField
 }
 
 var DefaultRequestArguments = &RequestArguments{
@@ -47,6 +61,7 @@ var DefaultRequestArguments = &RequestArguments{
 	Cookies:     nil,
 	Json:        nil,
 	Data:        nil,
+	Files:       nil,
 }
 
 // sendRequest sends http request and returns the response.
@@ -104,14 +119,57 @@ func prepareBody(args *RequestArguments) (io.Reader, error) {
 		return prepareJsonBody(args.Json)
 	}
 
+	if args.Files != nil {
+		body, contentType, err := prepareFilesBody(args.Files, args.Data)
+		args.Headers["Content-type"] = contentType
+		return body, err
+	}
+
 	if args.Data != nil {
 		args.Headers["Content-Type"] = defaultContentType
 		return prepareDataBody(args.Data)
 	}
+
 	return nil, nil
 }
 
-// prepareDataBody prepares the given HTTP Data body.
+// prepareFilesBody prepares the body for a multipart/form-data request.
+// It returns body, contentType and error.
+func prepareFilesBody(files []FileField, data map[string]string) (io.Reader, string, error) {
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	for _, file := range files {
+		fileWriter, err := writer.CreateFormFile(file.FieldName, file.FileName)
+		if err != nil {
+			return nil, "", err
+		}
+
+		if _, err := io.Copy(fileWriter, file.FileContent); err != nil {
+			return nil, "", err
+		}
+
+		if err := file.FileContent.Close(); err != nil {
+			return nil, "", err
+		}
+	}
+
+	for key, value := range data {
+		err := writer.WriteField(key, value)
+		if err != nil {
+			return nil, "", err
+		}
+	}
+
+	if err := writer.Close(); err != nil {
+		return nil, "", err
+	}
+
+	contentType := writer.FormDataContentType()
+	return body, contentType, nil
+}
+
+// prepareDataBody prepares the body for a application/x-www-form-urlencoded request.
 func prepareDataBody(data map[string]string) (io.Reader, error) {
 	reader := strings.NewReader(encodeParams(data))
 	return reader, nil
@@ -126,7 +184,7 @@ func encodeParams(data map[string]string) string {
 	return vs.Encode()
 }
 
-// prepareJsonBody prepares the give HTTP Json body.
+// prepareJsonBody prepares the body for application/json request.
 func prepareJsonBody(JSON interface{}) (io.Reader, error) {
 	var reader io.Reader
 	switch JSON.(type) {
