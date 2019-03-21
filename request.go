@@ -23,9 +23,14 @@ type FileField struct {
 }
 
 type RequestArguments struct {
+	// Client allows you to use a custom http.Client.
 	Client *http.Client
+
 	// Headers is a map of HTTP header.
 	Headers map[string]string
+
+	// Body specifies the body you can put into the request.
+	Body io.Reader
 
 	// Params is a map of URL query params in GET request.
 	Params map[string]string
@@ -38,30 +43,32 @@ type RequestArguments struct {
 	// []string{username, password}
 	Auth []string
 
-	Cookies []*http.Cookie
+	// Cookies specifies cookies attached to request.
+	Cookies map[string]string
+
+	// CookieJar specifies a cookiejar.
+	CookieJar http.CookieJar
 
 	// Json can be []byte, string or struct.
 	// When you want to send a JSON within request, you can use it.
 	Json interface{}
 
-	// Data is a map stores the key values, will be converted into the body of
-	// Post request.
+	// Data is a map stores the key values, will be converted
+	// into the body of Post request.
 	Data map[string]string
 
 	// Files specifies the files you wish to post.
 	Files []FileField
+
+	// RedirectLimit specifies the how many times we can
+	// redirect in response to a redirect.
+	RedirectLimit int
 }
 
 var DefaultRequestArguments = &RequestArguments{
-	Client:      http.DefaultClient,
-	Headers:     defaultHeaders,
-	Params:      nil,
-	ObjectParam: nil,
-	Auth:        nil,
-	Cookies:     nil,
-	Json:        nil,
-	Data:        nil,
-	Files:       nil,
+	Client:        http.DefaultClient,
+	Headers:       defaultHeaders,
+	RedirectLimit: defaultRedirectLimit,
 }
 
 // sendRequest sends http request and returns the response.
@@ -70,12 +77,13 @@ func sendRequest(method, reqUrl string, args *RequestArguments) (*Response, erro
 		args = DefaultRequestArguments
 	}
 
+	addCheckRedirectLimit(args)
+
 	req, err := prepareRequest(method, reqUrl, args)
 
 	if err != nil {
 		return nil, err
 	}
-
 	return NewResponse(args.Client.Do(req))
 }
 
@@ -114,6 +122,10 @@ func prepareRequest(method, reqUrl string, args *RequestArguments) (*http.Reques
 
 // prepareBody prepares the give HTTP body.
 func prepareBody(args *RequestArguments) (io.Reader, error) {
+	if args.Body != nil {
+		return args.Body, nil
+	}
+
 	if args.Json != nil {
 		args.Headers["Content-Type"] = defaultJsonType
 		return prepareJsonBody(args.Json)
