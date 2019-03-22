@@ -40,7 +40,7 @@ type RequestArguments struct {
 
 	// Auth is basic HTTP authentication formatting the username and password in base64,
 	// the format is:
-	// []string{username, password}
+	// []string{username, password}.
 	Auth []string
 
 	// Cookies specifies cookies attached to request.
@@ -66,7 +66,9 @@ type RequestArguments struct {
 }
 
 var DefaultRequestArguments = &RequestArguments{
-	Client:        http.DefaultClient,
+	Client: &http.Client{
+		Jar: setDefaultJar(),
+	},
 	Headers:       defaultHeaders,
 	RedirectLimit: defaultRedirectLimit,
 }
@@ -117,7 +119,22 @@ func prepareRequest(method, reqUrl string, args *RequestArguments) (*http.Reques
 	for k, v := range args.Headers {
 		req.Header.Set(k, v)
 	}
+
+	prepareCookies(args, req)
+
 	return req, err
+}
+
+// prepareCookies prepares the given HTTP cookie data.
+func prepareCookies(args *RequestArguments, req *http.Request) {
+	if args.CookieJar != nil {
+		args.Client.Jar = args.CookieJar
+	} else if args.Cookies != nil {
+		cookies := args.Client.Jar.Cookies(req.URL)
+		cusCookie := cookiesFromMap(args.Cookies)
+		cookies = append(cookies, cusCookie...)
+		args.Client.Jar.SetCookies(req.URL, cookies)
+	}
 }
 
 // prepareBody prepares the give HTTP body.

@@ -3,6 +3,9 @@ package requests4go
 import (
 	"errors"
 	"net/http"
+	"net/http/cookiejar"
+
+	"golang.org/x/net/publicsuffix"
 )
 
 const (
@@ -23,6 +26,14 @@ var (
 	ErrRedirectLimitExceeded = errors.New("requests4go: Request exceeded redirect count limit")
 )
 
+func setDefaultJar() *cookiejar.Jar {
+	options := cookiejar.Options{
+		PublicSuffixList: publicsuffix.List,
+	}
+	jar, _ := cookiejar.New(&options)
+	return jar
+}
+
 func addCheckRedirectLimit(args *RequestArguments) {
 	if args.Client.CheckRedirect != nil {
 		return
@@ -38,4 +49,15 @@ func addCheckRedirectLimit(args *RequestArguments) {
 		}
 		return nil
 	}
+}
+
+func cookiesFromMap(m map[string]string) []*http.Cookie {
+	l := len(m)
+	cookies := make([]*http.Cookie, l)
+	index := 0
+	for key, val := range m {
+		cookies[index] = &http.Cookie{Name: key, Value: val}
+		index++
+	}
+	return cookies
 }
