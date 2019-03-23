@@ -76,7 +76,19 @@ var DefaultRequestArguments = &RequestArguments{
 // sendRequest sends http request and returns the response.
 func sendRequest(method, reqUrl string, args *RequestArguments) (*Response, error) {
 	if args == nil {
-		args = DefaultRequestArguments
+		args = &RequestArguments{
+			Client: &http.Client{
+				Jar: setDefaultJar(),
+			},
+			Headers:       defaultHeaders,
+			RedirectLimit: defaultRedirectLimit,
+		}
+	}
+
+	if args.Client == nil {
+		args.Client = &http.Client{
+			Jar: setDefaultJar(),
+		}
 	}
 
 	addCheckRedirectLimit(args)
@@ -86,6 +98,7 @@ func sendRequest(method, reqUrl string, args *RequestArguments) (*Response, erro
 	if err != nil {
 		return nil, err
 	}
+
 	return NewResponse(args.Client.Do(req))
 }
 
