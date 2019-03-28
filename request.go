@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/google/go-querystring/query"
 )
@@ -63,6 +64,13 @@ type RequestArguments struct {
 	// RedirectLimit specifies the how many times we can
 	// redirect in response to a redirect.
 	RedirectLimit int
+
+	// Timeout specifies a time limit for requests made by Client of
+	// RequestArguments. The timeout includes connection time, any
+	// redirects, and reading the response body.
+	//
+	// If Timeout is zero, it means no timeout.
+	Timeout time.Duration
 }
 
 var DefaultRequestArguments = &RequestArguments{
@@ -89,6 +97,10 @@ func sendRequest(method, reqUrl string, args *RequestArguments) (*Response, erro
 		args.Client = &http.Client{
 			Jar: setDefaultJar(),
 		}
+	}
+
+	if args.Timeout != 0 {
+		args.Client.Timeout = args.Timeout
 	}
 
 	addCheckRedirectLimit(args)
