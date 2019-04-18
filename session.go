@@ -38,9 +38,8 @@ func (s *Session) mergeRequestsArguments(args *RequestArguments) *RequestArgumen
 		args = &RequestArguments{}
 	}
 
-	if args.Client == nil {
-		args.Client = s.Client
-	}
+	// Guarantee the uniqueness of Client.
+	args.Client = s.Client
 
 	if len(s.Args.Headers) > 0 || len(args.Headers) > 0 {
 		headers := make(map[string]string)
