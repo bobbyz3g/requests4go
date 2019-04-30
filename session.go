@@ -112,6 +112,6 @@ func (s *Session) Head(url string, args *RequestArguments) (*Response, error) {
 // Two options:
 //   1. Url.
 //   2. RequestArguments struct, can be nil.
-func (s *Session) Option(url string, args *RequestArguments) (*Response, error) {
-	return s.request("OPTION", url, args)
+func (s *Session) Options(url string, args *RequestArguments) (*Response, error) {
+	return s.request("OPTIONS", url, args)
 }
