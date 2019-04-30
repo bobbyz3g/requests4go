@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
 
 	"github.com/bitly/go-simplejson"
 )
@@ -141,4 +142,27 @@ func (r *Response) Json() (*simplejson.Json, error) {
 		return nil, err
 	}
 	return simplejson.NewJson(cnt)
+}
+
+// SaveContent saves response body to file.
+func (r *Response) SaveContent(filename string) error {
+	if r.internalError != nil {
+		return r.internalError
+	}
+
+	f, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+
+	defer r.Close()
+	defer f.Close()
+
+	_, err = io.Copy(f, r.getContent())
+
+	if err != nil && err != io.EOF {
+		return err
+	}
+
+	return nil
 }
