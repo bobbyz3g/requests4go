@@ -23,7 +23,7 @@ func TestBaseGet(t *testing.T) {
 }
 
 func TestCookieGet(t *testing.T) {
-	args := DefaultRequestArguments
+	args := NewRequestArguments()
 	args.Cookies = testMap
 
 	resp, err := Get("http://httpbin.org/cookies", args)
@@ -54,7 +54,7 @@ func TestBaseJsonPost(t *testing.T) {
 		"name",
 		21,
 	}
-	args := DefaultRequestArguments
+	args := NewRequestArguments()
 	args.Json = jsonStruct
 
 	resp, err := Post("http://httpbin.org/post", args)
@@ -75,7 +75,7 @@ func TestBaseJsonPost(t *testing.T) {
 }
 
 func TestBaseDataPost(t *testing.T) {
-	args := DefaultRequestArguments
+	args := NewRequestArguments()
 	args.Data = map[string]string{
 		"name": "name",
 		"age":  "21",
@@ -101,7 +101,7 @@ func TestBaseDataPost(t *testing.T) {
 }
 
 func TestBaseFilePost(t *testing.T) {
-	args := DefaultRequestArguments
+	args := NewRequestArguments()
 	f, err := os.Open("testdata/file4upload")
 
 	if err != nil {
@@ -156,7 +156,7 @@ func TestBaseBodyPost(t *testing.T) {
 
 	body, _ := prepareDataBody(data)
 
-	args := DefaultRequestArguments
+	args := NewRequestArguments()
 	args.Body = body
 
 	resp, err := Post("http://httpbin.org/post", args)

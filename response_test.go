@@ -3,7 +3,7 @@ package requests4go
 import "testing"
 
 func TestResponse(t *testing.T) {
-	args := DefaultRequestArguments
+	args := NewRequestArguments()
 	args.Params = map[string]string{
 		"a": "1",
 		"b": "2",

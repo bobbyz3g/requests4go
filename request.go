@@ -73,12 +73,15 @@ type RequestArguments struct {
 	Timeout time.Duration
 }
 
-var DefaultRequestArguments = &RequestArguments{
-	Client: &http.Client{
-		Jar: setDefaultJar(),
-	},
-	Headers:       defaultHeaders,
-	RedirectLimit: defaultRedirectLimit,
+// NewRequestArguments returns a new default RequestArguments object.
+func NewRequestArguments() *RequestArguments {
+	return &RequestArguments{
+		Client: &http.Client{
+			Jar: setDefaultJar(),
+		},
+		Headers:       defaultHeaders,
+		RedirectLimit: defaultRedirectLimit,
+	}
 }
 
 // sendRequest sends http request and returns the response.
