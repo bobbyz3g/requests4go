@@ -1,5 +1,7 @@
 # request4go
 
+[![Build Status](https://travis-ci.org/Kaiser925/requests4go.svg?branch=master)](https://travis-ci.org/Kaiser925/requests4go)
+
 Go HTTP Requests. ✨🎉✨
 
 Install
