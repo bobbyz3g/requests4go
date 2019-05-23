@@ -147,30 +147,3 @@ func TestBaseFilePost(t *testing.T) {
 		t.Errorf("Post file error: excepted \"%v\", got \"%v\"", fString2, file2)
 	}
 }
-
-func TestBaseBodyPost(t *testing.T) {
-	data := map[string]string{
-		"name": "name",
-		"age":  "21",
-	}
-
-	body, _ := prepareDataBody(data)
-
-	args := NewRequestArguments()
-	args.Body = body
-
-	resp, err := Post("http://httpbin.org/post", args)
-	if err != nil {
-		t.Fatalf("Request error: got %v", err)
-	}
-
-	JSON, err := resp.Json()
-	if err != nil {
-		t.Errorf("Get json error: %v", err)
-	}
-
-	excepted := "age=21&name=name"
-	if got, _ := JSON.Get("data").String(); got != excepted {
-		t.Errorf("Post Body error: excepted: %v, got %v", excepted, got)
-	}
-}
