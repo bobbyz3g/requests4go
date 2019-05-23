@@ -1,0 +1,16 @@
+language: go
+
+go:
+- 1.12.x
+- master
+
+matrix:
+  fast_finish: true
+
+before_install:
+  - go get -u -v github.com/bitly/go-simplejson
+  - go get -u -v github.com/google/go-querystring
+  - go get -u -v golang.org/x/net
+
+script:
+  - go test -v -race -covermode=atomic -coverprofile=coverage.out
