@@ -13,4 +13,6 @@ before_install:
   - go get -u -v golang.org/x/net
 
 script:
+  - env GO111MODULE=on go build
+  - env GO111MODULE=on go test
   - go test -v -race -covermode=atomic -coverprofile=coverage.out
