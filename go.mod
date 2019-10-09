@@ -1,6 +1,6 @@
 module github.com/Kaiser925/requests4go
 
-go 1.12
+go 1.13
 
 require (
 	github.com/bitly/go-simplejson v0.5.0

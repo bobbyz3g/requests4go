@@ -3,6 +3,7 @@ package requests4go
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -111,7 +112,7 @@ func sendRequest(method, reqUrl string, args *RequestArguments) (*Response, erro
 	req, err := prepareRequest(method, reqUrl, args)
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("sendRequest error: %w", err)
 	}
 
 	return NewResponse(args.Client.Do(req))
@@ -135,7 +136,7 @@ func prepareRequest(method, reqUrl string, args *RequestArguments) (*http.Reques
 	body, err := prepareBody(args)
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("prepareRequest error: %w", err)
 	}
 
 	req, err := http.NewRequest(method, reqUrl, body)
@@ -199,7 +200,7 @@ func prepareFilesBody(files []FileField, data map[string]string) (io.Reader, str
 	for _, file := range files {
 		fileWriter, err := writer.CreateFormFile(file.FieldName, file.FileName)
 		if err != nil {
-			return nil, "", err
+			return nil, "", fmt.Errorf("prepareFilesBody error: %w", err)
 		}
 
 		if _, err := io.Copy(fileWriter, file.FileContent); err != nil {
@@ -214,12 +215,12 @@ func prepareFilesBody(files []FileField, data map[string]string) (io.Reader, str
 	for key, value := range data {
 		err := writer.WriteField(key, value)
 		if err != nil {
-			return nil, "", err
+			return nil, "", fmt.Errorf("prepareFilesBody error: %w", err)
 		}
 	}
 
 	if err := writer.Close(); err != nil {
-		return nil, "", err
+		return nil, "", fmt.Errorf("prepareFilesBody error: %w", err)
 	}
 
 	contentType := writer.FormDataContentType()
@@ -252,7 +253,7 @@ func prepareJsonBody(JSON interface{}) (io.Reader, error) {
 	default:
 		byteS, err := json.Marshal(JSON)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("prepareJsonBody error: %w", err)
 		}
 		reader = bytes.NewReader(byteS)
 	}
@@ -268,13 +269,13 @@ func prepareURL(originUrl string, params map[string]string) (string, error) {
 	parsedUrl, err := url.Parse(originUrl)
 
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("prepareURL error: %w", err)
 	}
 
 	rawQuery, err := url.ParseQuery(parsedUrl.RawQuery)
 
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("prepareJsonBody error: %w", err)
 	}
 
 	for k, v := range params {
@@ -289,17 +290,17 @@ func prepareURLWithStruct(originUrl string, paramStruct interface{}) (string, er
 	parsedUrl, err := url.Parse(originUrl)
 
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("prepareURLWithStruct error: %w", err)
 	}
 
 	rawQuery, err := url.ParseQuery(parsedUrl.RawQuery)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("prepareURLWithStruct error: %w", err)
 	}
 
 	params, err := query.Values(paramStruct)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("prepareURLWithStruct error: %w", err)
 	}
 
 	for k, value := range params {

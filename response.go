@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"compress/zlib"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -24,7 +25,7 @@ type Response struct {
 // NewResponse returns new Response
 func NewResponse(rawResp *http.Response, err error) (*Response, error) {
 	if err != nil {
-		return &Response{internalError: err}, err
+		return &Response{internalError: err}, fmt.Errorf("NewResponse error: %w", err)
 	}
 
 	return &Response{
@@ -139,7 +140,7 @@ func (r *Response) Json() (*simplejson.Json, error) {
 	cnt, err := r.Content()
 	if err != nil {
 		r.internalError = err
-		return nil, err
+		return nil, fmt.Errorf("Json error: %w", err)
 	}
 	return simplejson.NewJson(cnt)
 }
@@ -152,7 +153,7 @@ func (r *Response) SaveContent(filename string) error {
 
 	f, err := os.Create(filename)
 	if err != nil {
-		return err
+		return fmt.Errorf("SaveContent error: %w", err)
 	}
 
 	defer r.Close()
@@ -161,7 +162,7 @@ func (r *Response) SaveContent(filename string) error {
 	_, err = io.Copy(f, r.getContent())
 
 	if err != nil && err != io.EOF {
-		return err
+		return fmt.Errorf("SaveContent error: %w", err)
 	}
 
 	return nil
