@@ -6,16 +6,12 @@ sudo:
 matrix:
   fast_finish: true
   include:
-  - go: 1.12.x
+  - go: 1.13.x
     env: GO111MODULE=on
 
-before_install:
-  - go get -u -v github.com/bitly/go-simplejson
-  - go get -u -v github.com/google/go-querystring
-  - go get -u -v golang.org/x/net
-
 script:
+  - go build
   - go test -v ./...
 
 notifications:
-  email: false
+  email: true
