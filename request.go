@@ -14,6 +14,7 @@ import (
 	"github.com/google/go-querystring/query"
 )
 
+// FileField used to describe a file that will be upload.
 type FileField struct {
 	// FileName specifies name of file that you wish to upload.
 	FileName string
@@ -24,6 +25,8 @@ type FileField struct {
 	FileContent io.ReadCloser
 }
 
+// RequestArguments is the base strcut for every request.
+// Can use it to set request params, such as: Header, Body.
 type RequestArguments struct {
 	// Client allows you to use a custom http.Client.
 	Client *http.Client
@@ -86,7 +89,7 @@ func NewRequestArguments() *RequestArguments {
 }
 
 // sendRequest sends http request and returns the response.
-func sendRequest(method, reqUrl string, args *RequestArguments) (*Response, error) {
+func sendRequest(method, reqURL string, args *RequestArguments) (*Response, error) {
 	if args == nil {
 		args = &RequestArguments{
 			Client: &http.Client{
@@ -109,7 +112,7 @@ func sendRequest(method, reqUrl string, args *RequestArguments) (*Response, erro
 
 	addCheckRedirectLimit(args)
 
-	req, err := prepareRequest(method, reqUrl, args)
+	req, err := prepareRequest(method, reqURL, args)
 
 	if err != nil {
 		return nil, fmt.Errorf("sendRequest error: %w", err)
@@ -119,16 +122,16 @@ func sendRequest(method, reqUrl string, args *RequestArguments) (*Response, erro
 }
 
 // prepareRequest prepares http.Request according to method, url and RequestArguments.
-func prepareRequest(method, reqUrl string, args *RequestArguments) (*http.Request, error) {
+func prepareRequest(method, reqURL string, args *RequestArguments) (*http.Request, error) {
 	var err error
 
 	switch {
 	case len(args.Params) != 0:
-		if reqUrl, err = prepareURL(reqUrl, args.Params); err != nil {
+		if reqURL, err = prepareURL(reqURL, args.Params); err != nil {
 			return nil, err
 		}
 	case args.ObjectParam != nil:
-		if reqUrl, err = prepareURLWithStruct(reqUrl, args.ObjectParam); err != nil {
+		if reqURL, err = prepareURLWithStruct(reqURL, args.ObjectParam); err != nil {
 			return nil, err
 		}
 	}
@@ -139,7 +142,7 @@ func prepareRequest(method, reqUrl string, args *RequestArguments) (*http.Reques
 		return nil, fmt.Errorf("prepareRequest error: %w", err)
 	}
 
-	req, err := http.NewRequest(method, reqUrl, body)
+	req, err := http.NewRequest(method, reqURL, body)
 
 	if args.Auth != nil {
 		req.SetBasicAuth(args.Auth[0], args.Auth[1])

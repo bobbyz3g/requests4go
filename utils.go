@@ -23,6 +23,7 @@ var (
 		"User-Agent":      defaultUserAgent,
 	}
 
+	// ErrRedirectLimitExceeded will be returned when redirect times over limit.
 	ErrRedirectLimitExceeded = errors.New("requests4go: Request exceeded redirect count limit")
 )
 

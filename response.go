@@ -13,6 +13,7 @@ import (
 	"github.com/bitly/go-simplejson"
 )
 
+// Response represents the response from the server.
 type Response struct {
 	RawResponse   *http.Response
 	Status        string
