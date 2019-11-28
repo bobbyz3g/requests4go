@@ -15,7 +15,7 @@ import (
 const (
 	defaultUserAgent     = "Request4go"
 	defaultContentType   = "application/x-www-form-urlencoded; charset=utf-8"
-	defaultJsonType      = "application/json; charset=utf-8"
+	defaultJSONType      = "application/json; charset=utf-8"
 	defaultRedirectLimit = 10
 )
 

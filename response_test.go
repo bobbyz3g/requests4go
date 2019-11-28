@@ -38,7 +38,7 @@ func TestResponse(t *testing.T) {
 		t.Errorf("Internal content error: \n text is %v, \n string of content is %v", text, content)
 	}
 
-	json, err := resp.Json()
+	json, err := resp.JSON()
 
 	if err != nil {
 		t.Errorf("Response.Json error: %v", err)

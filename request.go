@@ -58,9 +58,9 @@ type RequestArguments struct {
 	// CookieJar specifies a cookiejar.
 	CookieJar http.CookieJar
 
-	// Json can be []byte, string or struct.
+	// JSON can be []byte, string or struct.
 	// When you want to send a JSON within request, you can use it.
-	Json interface{}
+	JSON interface{}
 
 	// Data is a map stores the key values, will be converted
 	// into the body of Post request.
@@ -179,9 +179,9 @@ func prepareBody(args *RequestArguments) (io.Reader, error) {
 		return args.Body, nil
 	}
 
-	if args.Json != nil {
-		args.Headers["Content-Type"] = defaultJsonType
-		return prepareJsonBody(args.Json)
+	if args.JSON != nil {
+		args.Headers["Content-Type"] = defaultJSONType
+		return prepareJSONBody(args.JSON)
 	}
 
 	if args.Files != nil {
@@ -249,8 +249,8 @@ func encodeParams(data map[string]string) string {
 	return vs.Encode()
 }
 
-// prepareJsonBody prepares the body for application/json request.
-func prepareJsonBody(JSON interface{}) (io.Reader, error) {
+// prepareJSONBody prepares the body for application/json request.
+func prepareJSONBody(JSON interface{}) (io.Reader, error) {
 	var reader io.Reader
 	switch JSON.(type) {
 	case string:
@@ -268,18 +268,18 @@ func prepareJsonBody(JSON interface{}) (io.Reader, error) {
 }
 
 // prepareURL prepares new URL with url query params.
-func prepareURL(originUrl string, params map[string]string) (string, error) {
+func prepareURL(originURL string, params map[string]string) (string, error) {
 	if len(params) == 0 {
-		return originUrl, nil
+		return originURL, nil
 	}
 
-	parsedUrl, err := url.Parse(originUrl)
+	parsedURL, err := url.Parse(originURL)
 
 	if err != nil {
 		return "", fmt.Errorf("prepareURL error: %w", err)
 	}
 
-	rawQuery, err := url.ParseQuery(parsedUrl.RawQuery)
+	rawQuery, err := url.ParseQuery(parsedURL.RawQuery)
 
 	if err != nil {
 		return "", fmt.Errorf("prepareJsonBody error: %w", err)
@@ -289,18 +289,18 @@ func prepareURL(originUrl string, params map[string]string) (string, error) {
 		rawQuery.Set(k, v)
 	}
 
-	return mergeParams(parsedUrl, rawQuery), nil
+	return mergeParams(parsedURL, rawQuery), nil
 }
 
 // prepareUrlWithStruct prepares new Url with object param.
-func prepareURLWithStruct(originUrl string, paramStruct interface{}) (string, error) {
-	parsedUrl, err := url.Parse(originUrl)
+func prepareURLWithStruct(originURL string, paramStruct interface{}) (string, error) {
+	parsedURL, err := url.Parse(originURL)
 
 	if err != nil {
 		return "", fmt.Errorf("prepareURLWithStruct error: %w", err)
 	}
 
-	rawQuery, err := url.ParseQuery(parsedUrl.RawQuery)
+	rawQuery, err := url.ParseQuery(parsedURL.RawQuery)
 	if err != nil {
 		return "", fmt.Errorf("prepareURLWithStruct error: %w", err)
 	}
@@ -316,11 +316,11 @@ func prepareURLWithStruct(originUrl string, paramStruct interface{}) (string, er
 		}
 	}
 
-	return mergeParams(parsedUrl, rawQuery), nil
+	return mergeParams(parsedURL, rawQuery), nil
 }
 
 // mergeParams merges the url and params, returns new url.
-func mergeParams(parsedUrl *url.URL, rawQuery url.Values) string {
-	newUrl := strings.Replace(parsedUrl.String(), "?"+parsedUrl.RawQuery, "", -1)
-	return newUrl + "?" + rawQuery.Encode()
+func mergeParams(parsedURL *url.URL, rawQuery url.Values) string {
+	newURL := strings.Replace(parsedURL.String(), "?"+parsedURL.RawQuery, "", -1)
+	return newURL + "?" + rawQuery.Encode()
 }

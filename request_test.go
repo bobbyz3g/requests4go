@@ -6,28 +6,26 @@ package requests4go
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestPrepareURl(t *testing.T) {
-	reqUrl, err := prepareURL("https://www.example.com/", map[string]string{"a": "1", "b": "2"})
+	reqURL, err := prepareURL("https://www.example.com/", map[string]string{"a": "1", "b": "2"})
 
 	if err != nil {
 		t.Errorf("Url error: got %s", err)
 	}
 
-	if reqUrl != "https://www.example.com/?a=1&b=2" {
-		t.Errorf("Prepare url error: excepted %s, got %s", "https://www.example.com/?a=1&b=2", reqUrl)
-	}
+	assert.Equal(t, "https://www.example.com/?a=1&b=2", reqURL)
 
-	reqUrl3, err := prepareURL("https://www.example.com/?c=3", map[string]string{"a": "1", "b": "2"})
+	reqURL3, err := prepareURL("https://www.example.com/?c=3", map[string]string{"a": "1", "b": "2"})
 
 	if err != nil {
 		t.Errorf("Url error: got %s", err)
 	}
 
-	if reqUrl3 != "https://www.example.com/?a=1&b=2&c=3" {
-		t.Errorf("Prepare url error: excepted %s, got %s", "https://www.example.com/?a=1&b=2&c=3", reqUrl3)
-	}
+	assert.Equal(t, "https://www.example.com/?a=1&b=2&c=3", reqURL3)
 }
 
 func TestPrepareUrlWithStruct(t *testing.T) {
@@ -36,14 +34,12 @@ func TestPrepareUrlWithStruct(t *testing.T) {
 		B string `url:"b"`
 	}
 	opt := Options{"1", "2"}
-	reqUrl, err := prepareURLWithStruct("https://www.example.com/", opt)
+	reqURL, err := prepareURLWithStruct("https://www.example.com/", opt)
 	if err != nil {
 		t.Errorf("Url error: got %s", err)
 	}
 
 	target := "https://www.example.com/?a=1&b=2"
-	if reqUrl != target {
-		t.Errorf("Prepare url error: excepted %s, got %s", target, reqUrl)
-	}
 
+	assert.Equal(t, target, reqURL)
 }

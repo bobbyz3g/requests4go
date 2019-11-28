@@ -136,9 +136,9 @@ func (r *Response) Content() ([]byte, error) {
 	return r.content.Bytes(), nil
 }
 
-// Json returns simplejson.Json.
+// JSON returns simplejson.Json.
 // See the usage of simplejson on https://godoc.org/github.com/bitly/go-simplejson.
-func (r *Response) Json() (*simplejson.Json, error) {
+func (r *Response) JSON() (*simplejson.Json, error) {
 	if r.internalError != nil {
 		return nil, r.internalError
 	}
