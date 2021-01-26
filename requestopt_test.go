@@ -46,6 +46,22 @@ func TestAuth(t *testing.T) {
 	}
 }
 
+var headerTests = []struct {
+	k string
+	v string
+}{
+	{"apple", "ok"},
+	{"banana", "okokok"},
+}
+
+func TestHeaders(t *testing.T) {
+	for _, tt := range headerTests {
+		r, _ := NewRequestWithOpt("GET", "http://example.com", Headers(map[string]string{tt.k: tt.v}))
+		v := r.Header.Get(tt.k)
+		assert.Equal(t, v, tt.v)
+	}
+}
+
 func TestAll(t *testing.T) {
 	params := map[string]string{
 		"b": "b",
