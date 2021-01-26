@@ -1,6 +1,6 @@
 # request4go
 
-[![Build Status](https://travis-ci.org/Kaiser925/requests4go.svg?branch=master)](https://travis-ci.org/Kaiser925/requests4go)
+![test](https://github.com/Kaiser925/requests4go/workflows/test/badge.svg)
 
 Go HTTP Requests. ✨🎉✨
 
