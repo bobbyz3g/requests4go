@@ -14,7 +14,10 @@
 package requests4go
 
 import (
+	"bytes"
+	"encoding/json"
 	"github.com/stretchr/testify/assert"
+	"net/http"
 	"testing"
 )
 
@@ -75,4 +78,20 @@ func TestAll(t *testing.T) {
 	assert.Equal(t, ok, authTests[0].ok)
 	assert.Equal(t, username, authTests[0].username)
 	assert.Equal(t, password, authTests[0].password)
+}
+
+var jsonTests = struct {
+	Name string `json:"name"`
+	Age  int    `json:"age"`
+}{
+	"name",
+	21,
+}
+
+func TestJSON(t *testing.T) {
+	req, _ := NewRequestWithOpt("POST", "http://httpbin.org/post", JSON(jsonTests))
+	b, _ := json.Marshal(jsonTests)
+	reqE, _ := http.NewRequest("POST", "http://httpbin.org/post", bytes.NewReader(b))
+	assert.Equal(t, req.Body, reqE.Body)
+	assert.Equal(t, req.ContentLength, reqE.ContentLength)
 }
