@@ -25,22 +25,18 @@ import (
 // A RequestOption is represent a option of request.
 type RequestOption func(req *http.Request) error
 
-// NewRequestWithOpt wrappers the NewRequestWithOptCtx
-func NewRequestWithOpt(
-	method string,
-	url string,
-	opts ...RequestOption,
-) (*http.Request, error) {
-	return NewRequestWithOptCtx(context.Background(), method, url, opts...)
+// NewRequest wrappers the NewRequestWithContext
+func NewRequest(method, url string, opts ...RequestOption) (*http.Request, error) {
+	return NewRequestWithContext(context.Background(), method, url, opts...)
 }
 
-// NewRequestWithOptCtx builds a new *http.Request with Context and RequestOption
-func NewRequestWithOptCtx(
-	ctx context.Context,
-	method string,
-	url string,
-	opts ...RequestOption,
-) (*http.Request, error) {
+// NewRequestWithContext builds a new *http.Request with Context and RequestOption
+//
+// Note:
+// If multiple option will modify the request body,
+// only the last one will take effect.
+// The order of options all will effect final request status.
+func NewRequestWithContext(ctx context.Context, method, url string, opts ...RequestOption) (*http.Request, error) {
 	req, err := http.NewRequestWithContext(ctx, method, url, nil)
 	if err != nil {
 		return nil, err

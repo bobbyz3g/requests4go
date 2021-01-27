@@ -26,7 +26,7 @@ func TestParams(t *testing.T) {
 		"b": "b",
 		"a": "c",
 	}
-	req, _ := NewRequestWithOpt("get", "http://simple.org/path/?b=a", Params(params))
+	req, _ := NewRequest("get", "http://simple.org/path/?b=a", Params(params))
 	assert.Equal(t, req.URL.String(), "http://simple.org/path/?a=c&b=b")
 }
 
@@ -41,7 +41,7 @@ var authTests = []struct {
 
 func TestAuth(t *testing.T) {
 	for _, tt := range authTests {
-		r, _ := NewRequestWithOpt("GET", "http://example.com/", Auth(tt.username, tt.password))
+		r, _ := NewRequest("GET", "http://example.com/", Auth(tt.username, tt.password))
 		username, password, ok := r.BasicAuth()
 		assert.Equal(t, ok, tt.ok)
 		assert.Equal(t, username, tt.username)
@@ -59,7 +59,7 @@ var headerTests = []struct {
 
 func TestHeaders(t *testing.T) {
 	for _, tt := range headerTests {
-		r, _ := NewRequestWithOpt("GET", "http://example.com", Headers(map[string]string{tt.k: tt.v}))
+		r, _ := NewRequest("GET", "http://example.com", Headers(map[string]string{tt.k: tt.v}))
 		v := r.Header.Get(tt.k)
 		assert.Equal(t, v, tt.v)
 	}
@@ -70,7 +70,7 @@ func TestAll(t *testing.T) {
 		"b": "b",
 		"a": "c",
 	}
-	req, _ := NewRequestWithOpt("get", "http://simple.org/path/?b=a",
+	req, _ := NewRequest("get", "http://simple.org/path/?b=a",
 		Params(params),
 		Auth(authTests[0].username, authTests[0].password))
 	assert.Equal(t, req.URL.String(), "http://simple.org/path/?a=c&b=b")
@@ -89,7 +89,7 @@ var jsonTests = struct {
 }
 
 func TestJSON(t *testing.T) {
-	req, _ := NewRequestWithOpt("POST", "http://httpbin.org/post", JSON(jsonTests))
+	req, _ := NewRequest("POST", "http://httpbin.org/post", JSON(jsonTests))
 	b, _ := json.Marshal(jsonTests)
 	reqE, _ := http.NewRequest("POST", "http://httpbin.org/post", bytes.NewReader(b))
 	assert.Equal(t, req.Body, reqE.Body)
