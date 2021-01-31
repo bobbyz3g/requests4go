@@ -17,7 +17,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/stretchr/testify/assert"
+	"io/ioutil"
 	"net/http"
+	"os"
 	"testing"
 )
 
@@ -94,4 +96,21 @@ func TestJSON(t *testing.T) {
 	reqE, _ := http.NewRequest("POST", "http://httpbin.org/post", bytes.NewReader(b))
 	assert.Equal(t, req.Body, reqE.Body)
 	assert.Equal(t, req.ContentLength, reqE.ContentLength)
+}
+
+func TestFile(t *testing.T) {
+	filename := "testdata/file4upload"
+	req, err := NewRequest("POST", "http://example.com", File(filename))
+	assert.Equal(t, err, nil)
+
+	f, err := os.Open(filename)
+	assert.Equal(t, err, nil)
+
+	fb, err := ioutil.ReadAll(f)
+	assert.Equal(t, err, nil)
+
+	assert.Equal(t, req.ContentLength, int64(len(fb)))
+	b, err := ioutil.ReadAll(req.Body)
+	assert.Equal(t, err, nil)
+	assert.Equal(t, b, fb)
 }

@@ -20,6 +20,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
 )
 
 // A RequestOption is represent a option of request.
@@ -95,6 +96,31 @@ func JSON(v interface{}) RequestOption {
 			return ioutil.NopCloser(&r), nil
 		}
 		req.Header.Set("Content-Type", "application/json")
+		return nil
+	}
+}
+
+// File sets request body be file content.
+func File(filename string) RequestOption {
+	return func(req *http.Request) error {
+		f, err := os.Open(filename)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		// Copy file to new ReaderCloser, not use file directly
+		b := &bytes.Buffer{}
+		if _, err := io.Copy(b, f); err != nil {
+			return err
+		}
+		req.ContentLength = int64(b.Len())
+		req.Body = ioutil.NopCloser(b)
+		snapshot := *b
+		req.GetBody = func() (io.ReadCloser, error) {
+			r := snapshot
+			return ioutil.NopCloser(&r), nil
+		}
 		return nil
 	}
 }
