@@ -114,3 +114,21 @@ func TestFile(t *testing.T) {
 	assert.Equal(t, err, nil)
 	assert.Equal(t, b, fb)
 }
+
+func TestCookies(t *testing.T) {
+	c := map[string]string{
+		"Key1": "Value1",
+		"Key2": "Value2",
+	}
+	req, err := NewRequest("POST", "http://example.com", Cookies(c))
+	assert.Equal(t, err, nil)
+
+	cookies := req.Cookies()
+	assert.Equal(t, len(c), len(cookies))
+	for _, cookie := range cookies {
+		value, ok := c[cookie.Name]
+		assert.Equal(t, ok, true)
+		assert.Equal(t, value, cookie.Value)
+	}
+
+}

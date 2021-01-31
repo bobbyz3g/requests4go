@@ -51,6 +51,7 @@ func NewRequestWithContext(ctx context.Context, method, url string, opts ...Requ
 }
 
 // Params sets url query parameters for the request.
+// It replaces any existing values.
 func Params(params map[string]string) RequestOption {
 	return func(req *http.Request) error {
 		q := req.URL.Query()
@@ -71,6 +72,8 @@ func Auth(name string, password string) RequestOption {
 }
 
 // Headers sets the header for the request.
+// It replaces any existing values.
+// The key is case insensitive.
 func Headers(headers map[string]string) RequestOption {
 	return func(req *http.Request) error {
 		for k, v := range headers {
@@ -120,6 +123,16 @@ func File(filename string) RequestOption {
 		req.GetBody = func() (io.ReadCloser, error) {
 			r := snapshot
 			return ioutil.NopCloser(&r), nil
+		}
+		return nil
+	}
+}
+
+// Cookies add the cookie to http.Request.
+func Cookies(c map[string]string) RequestOption {
+	return func(req *http.Request) error {
+		for k, v := range c {
+			req.AddCookie(&http.Cookie{Name: k, Value: v})
 		}
 		return nil
 	}
