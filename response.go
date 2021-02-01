@@ -5,7 +5,6 @@
 package requests4go
 
 import (
-	"bytes"
 	"compress/gzip"
 	"compress/zlib"
 	"fmt"
@@ -17,71 +16,95 @@ import (
 	"github.com/bitly/go-simplejson"
 )
 
-// Response represents the response from the server.
+// Response is a wrapper of the http.Response.
+// It opens up new methods for http.Response.
 type Response struct {
-	RawResponse   *http.Response
-	Status        string
-	StatusCode    int
-	Header        http.Header
-	content       *bytes.Buffer
-	internalError error
+	*http.Response
+
+	content []byte
 }
 
 // NewResponse returns new Response
-func NewResponse(rawResp *http.Response, err error) (*Response, error) {
-	if err != nil {
-		return &Response{internalError: err}, fmt.Errorf("NewResponse error: %w", err)
-	}
-
+func NewResponse(resp *http.Response) *Response {
 	return &Response{
-		RawResponse:   rawResp,
-		Status:        rawResp.Status,
-		StatusCode:    rawResp.StatusCode,
-		Header:        rawResp.Header,
-		content:       bytes.NewBuffer([]byte{}),
-		internalError: nil,
-	}, nil
+		resp,
+		nil,
+	}
 }
 
 // Ok returns true if the status code is less than 400.
 func (r *Response) Ok() bool {
-	if r.internalError != nil {
-		return false
-	}
 	return r.StatusCode < 400 && r.StatusCode >= 200
 }
 
 // Close is to support io.ReadCloser.
 func (r *Response) Close() error {
-	if r.internalError != nil {
-		return r.internalError
+	_, err := io.Copy(ioutil.Discard, r)
+	if err != nil {
+		return err
 	}
-
-	io.Copy(ioutil.Discard, r)
-	return r.RawResponse.Body.Close()
+	return r.Body.Close()
 }
 
 // Read is to support io.ReadClose.
 func (r *Response) Read(p []byte) (n int, err error) {
-	if r.internalError != nil {
-		return -1, r.internalError
-	}
-	return r.RawResponse.Body.Read(p)
+	return r.Body.Read(p)
 }
 
-func (r *Response) loadContent() error {
-	if r.internalError != nil {
-		return r.internalError
+// Text returns content of response in string.
+// It will close response.
+func (r *Response) Text() (string, error) {
+	content, err := r.loadContent()
+	if err != nil {
+		return "", err
+	}
+	return string(content), nil
+}
+
+// Content returns content of response in bytes.
+// It will close response.
+func (r *Response) Content() ([]byte, error) {
+	content, err := r.loadContent()
+	if err != nil {
+		return nil, err
+	}
+	return content, nil
+}
+
+// JSON returns simplejson.Json and closes the response.
+// See the usage of simplejson on https://godoc.org/github.com/bitly/go-simplejson.
+func (r *Response) SimpleJSON() (*simplejson.Json, error) {
+	content, err := r.loadContent()
+	if err != nil {
+		return nil, fmt.Errorf("Json error: %w", err)
+	}
+	return simplejson.NewJson(content)
+}
+
+// SaveContent saves response body to file and closes the response.
+func (r *Response) SaveContent(filename string) error {
+	f, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	content, err := r.loadContent()
+	if err != nil {
+		return err
 	}
 
-	if r.content.Len() != 0 || r.RawResponse.ContentLength == 0 {
-		return nil
+	_, err = f.Write(content)
+	if err != nil {
+		return err
 	}
+	return nil
+}
 
-	if r.RawResponse.ContentLength > 0 {
-		r.content.Grow(int(r.RawResponse.ContentLength))
+func (r *Response) loadContent() ([]byte, error) {
+	if r.content != nil {
+		return r.content, nil
 	}
-
 	var reader io.ReadCloser
 
 	defer func() {
@@ -93,82 +116,19 @@ func (r *Response) loadContent() error {
 	switch r.Header.Get("Content-Encoding") {
 	case "gzip":
 		if reader, err = gzip.NewReader(r); err != nil {
-			return err
+			return nil, err
 		}
 	case "deflate":
 		if reader, err = zlib.NewReader(r); err != nil {
-			return err
+			return nil, err
 		}
 	default:
 		reader = r
 	}
-
-	if _, err := io.Copy(r.content, reader); err != nil && err != io.EOF {
-		return err
-	}
-	return nil
-}
-
-func (r *Response) getContent() io.Reader {
-	if r.content.Len() == 0 {
-		return r
-	}
-	return r.content
-}
-
-// Text returns content of response in string.
-func (r *Response) Text() (string, error) {
-	if err := r.loadContent(); err != nil {
-		return "", err
-	}
-	return r.content.String(), nil
-}
-
-// Content returns content of response in bytes.
-func (r *Response) Content() ([]byte, error) {
-	if err := r.loadContent(); err != nil {
+	content, err := ioutil.ReadAll(reader)
+	if err != nil && err != io.EOF {
 		return nil, err
 	}
-	if r.content.Len() == 0 {
-		return nil, nil
-	}
-
-	return r.content.Bytes(), nil
-}
-
-// JSON returns simplejson.Json.
-// See the usage of simplejson on https://godoc.org/github.com/bitly/go-simplejson.
-func (r *Response) JSON() (*simplejson.Json, error) {
-	if r.internalError != nil {
-		return nil, r.internalError
-	}
-	cnt, err := r.Content()
-	if err != nil {
-		r.internalError = err
-		return nil, fmt.Errorf("Json error: %w", err)
-	}
-	return simplejson.NewJson(cnt)
-}
-
-// SaveContent saves response body to file.
-func (r *Response) SaveContent(filename string) error {
-	if r.internalError != nil {
-		return r.internalError
-	}
-
-	f, err := os.Create(filename)
-	if err != nil {
-		return fmt.Errorf("SaveContent error: %w", err)
-	}
-
-	defer r.Close()
-	defer f.Close()
-
-	_, err = io.Copy(f, r.getContent())
-
-	if err != nil && err != io.EOF {
-		return fmt.Errorf("SaveContent error: %w", err)
-	}
-
-	return nil
+	r.content = content
+	return content, nil
 }

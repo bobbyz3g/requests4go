@@ -49,9 +49,9 @@ func TestBaseFilePost(t *testing.T) {
 	}
 	fString1 := "Hey, I am test file."
 	fString2 := "Hey, I am test file too."
-	JSON, err := resp.JSON()
+	JSON, err := resp.SimpleJSON()
 	if err != nil {
-		t.Fatalf("Get response JSON error: %v", err)
+		t.Fatalf("Get response SimpleJSON error: %v", err)
 	}
 
 	file1, _ := JSON.Get("files").Get("file").String()
@@ -80,7 +80,7 @@ func TestCookieGet(t *testing.T) {
 		t.Fatalf("Request error: %v", err)
 	}
 
-	JSON, err := resp.JSON()
+	JSON, err := resp.SimpleJSON()
 	if err != nil {
 		t.Fatalf("Get json error: %v", err)
 	}
@@ -108,7 +108,7 @@ func TestBaseJsonPost(t *testing.T) {
 		t.Errorf("Reqeust erro: got %v", err)
 	}
 
-	JSON, err := resp.JSON()
+	JSON, err := resp.SimpleJSON()
 	if err != nil {
 		t.Errorf("%v \n", err)
 	}
@@ -128,7 +128,7 @@ func TestBaseDataPost(t *testing.T) {
 		t.Errorf("Request error: got %v", err)
 	}
 
-	JSON, err := resp.JSON()
+	JSON, err := resp.SimpleJSON()
 	if err != nil {
 		t.Errorf("Get json error: %v", err)
 	}

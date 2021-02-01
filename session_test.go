@@ -14,7 +14,7 @@ func TestBaseSession(t *testing.T) {
 	s := NewSession(nil)
 	s.Get("http://httpbin.org/cookies/set/sessioncookie/123456789", nil)
 	resp, _ := s.Get("http://httpbin.org/cookies", nil)
-	JSON, _ := resp.JSON()
+	JSON, _ := resp.SimpleJSON()
 	cookie, _ := JSON.Get("cookies").Get("sessioncookie").String()
 	assert.Equal(t, "123456789", cookie)
 }

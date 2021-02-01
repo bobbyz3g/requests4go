@@ -121,8 +121,11 @@ func sendRequest(method, reqURL string, args *RequestArguments) (*Response, erro
 	if err != nil {
 		return nil, fmt.Errorf("sendRequest error: %w", err)
 	}
-
-	return NewResponse(args.Client.Do(req))
+	resp, err := args.Client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	return NewResponse(resp), nil
 }
 
 // prepareRequest prepares http.Request according to method, url and RequestArguments.
