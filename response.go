@@ -7,6 +7,7 @@ package requests4go
 import (
 	"compress/gzip"
 	"compress/zlib"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -99,6 +100,15 @@ func (r *Response) SaveContent(filename string) error {
 		return err
 	}
 	return nil
+}
+
+// JSON unmarshal the response content to v.
+func (r *Response) JSON(v interface{}) error {
+	content, err := r.loadContent()
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(content, v)
 }
 
 func (r *Response) loadContent() ([]byte, error) {
