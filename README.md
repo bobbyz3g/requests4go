@@ -24,54 +24,24 @@ import "github.com/Kaiser925/requests4go"
 
 ~~~go
 // get
-resp, err := requests4go.Get("http://httpbin.org/get", nil)
+resp, err := requests4go.Get("http://httpbin.org/get")
 if err != nil {
 	fmt.Println(err)
 }
 fmt.Println(resp.Status)
 ~~~
+
+You can also set Request with RequestOption
+
+```go
+headers := map[string]string{
+	"x-test-header": "value"
+}
+
+resp, _ := requests4go.Get("http://httpbin.org/get", Headers(headers))
+```
 
 Now, we hava a **Response** object called resp. We can get all the information we need from this object.
-
-Make an HTTP POST request.
-
-~~~go
-args := requests4go.NewRequestArguments()
-
-args.Data = map[string]string{
-	"name": "Apple",
-}
-
-resp, err := requests4go.Post("https://httpbin.org/post", args)
-
-if err != nil {
-	fmt.Println(err)
-}
-fmt.Println(resp.Status)
-~~~
-
-Other HTTP request types: PUT, DELETE, HEAD and OPTIONS.
-
-~~~go
-args := requests4go.NewRequestArguments()
-
-args.Data = map[string]string{
-	"name": "Apple",
-}
-
-resp, err := requests4go.Put("https://httpbin.org/put", args)
-
-if err != nil {
-	fmt.Println(err)
-}
-fmt.Println(resp.Status)
-
-resp, err = requests4go.Delete("https://httpbin.org/delete", nil)
-
-resp, err = requests4go.Head("https://httpbin.org/get",nil)
-
-resp, err = requests4go.Options("https://httpbin.org/get",nil)
-~~~
 
 ### Response Content
 
@@ -96,8 +66,8 @@ fmt.Println(txt)
 We can deal with JSON data by using [go-simplejson](https://github.com/bitly/go-simplejson).
 
 ~~~go
-resp, _ := requests4go.Get("https://httpbin.org/get", nil)
-j, _ := resp.Json()
+resp, _ := requests4go.Get("https://httpbin.org/get")
+j, _ := resp.SimpleJSON()
 url, _ := j.Get("url").String()
 fmt.Println(url)
 
