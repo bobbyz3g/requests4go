@@ -15,7 +15,6 @@ package requests4go
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"io"
 	"io/ioutil"
@@ -25,30 +24,6 @@ import (
 
 // A RequestOption is represent a option of request.
 type RequestOption func(req *http.Request) error
-
-// NewRequest wrappers the NewRequestWithContext
-func NewRequest(method, url string, opts ...RequestOption) (*http.Request, error) {
-	return NewRequestWithContext(context.Background(), method, url, opts...)
-}
-
-// NewRequestWithContext builds a new *http.Request with Context and RequestOption
-//
-// Note:
-// If multiple option will modify the request body,
-// only the last one will take effect.
-// The order of options all will effect final request status.
-func NewRequestWithContext(ctx context.Context, method, url string, opts ...RequestOption) (*http.Request, error) {
-	req, err := http.NewRequestWithContext(ctx, method, url, nil)
-	if err != nil {
-		return nil, err
-	}
-	for _, opt := range opts {
-		if err := opt(req); err != nil {
-			return nil, err
-		}
-	}
-	return req, nil
-}
 
 // Params sets url query parameters for the request.
 // It replaces any existing values.

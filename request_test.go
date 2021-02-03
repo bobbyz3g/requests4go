@@ -1,5 +1,5 @@
 // Developed by Kaiser925 on 2021/2/2.
-// Lasted modified 2021/1/27.
+// Lasted modified 2021/2/1.
 // Copyright (c) 2021.  All rights reserved
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,41 +14,83 @@
 package requests4go
 
 import (
-	"testing"
-
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
-func TestPrepareURl(t *testing.T) {
-	reqURL, err := prepareURL("https://www.example.com/", map[string]string{"a": "1", "b": "2"})
-
-	if err != nil {
-		t.Errorf("Url error: got %s", err)
-	}
-
-	assert.Equal(t, "https://www.example.com/?a=1&b=2", reqURL)
-
-	reqURL3, err := prepareURL("https://www.example.com/?c=3", map[string]string{"a": "1", "b": "2"})
-
-	if err != nil {
-		t.Errorf("Url error: got %s", err)
-	}
-
-	assert.Equal(t, "https://www.example.com/?a=1&b=2&c=3", reqURL3)
+var testMap = map[string]string{
+	"name": "name",
+	"age":  "age",
 }
 
-func TestPrepareUrlWithStruct(t *testing.T) {
-	type Options struct {
-		A string `url:"a"`
-		B string `url:"b"`
-	}
-	opt := Options{"1", "2"}
-	reqURL, err := prepareURLWithStruct("https://www.example.com/", opt)
+func TestBaseGet(t *testing.T) {
+	resp, err := Get("http://httpbin.org/get")
+
 	if err != nil {
-		t.Errorf("Url error: got %s", err)
+		t.Errorf("Get error: excepted no error, got %v", err)
 	}
 
-	target := "https://www.example.com/?a=1&b=2"
+	assert.Equal(t, true, resp.Ok())
+}
 
-	assert.Equal(t, target, reqURL)
+func TestCookieGet(t *testing.T) {
+	resp, err := Get("http://httpbin.org/cookies", Cookies(testMap))
+
+	if err != nil {
+		t.Fatalf("Request error: %v", err)
+	}
+
+	JSON, err := resp.SimpleJSON()
+	if err != nil {
+		t.Fatalf("Get json error: %v", err)
+	}
+
+	name, _ := JSON.Get("cookies").Get("name").String()
+	age, _ := JSON.Get("cookies").Get("age").String()
+
+	assert.Equal(t, testMap["name"], name)
+	assert.Equal(t, testMap["age"], age)
+}
+
+func TestBaseJsonPost(t *testing.T) {
+	jsonStruct := struct {
+		Name string `json:"name"`
+		Age  int    `json:"age"`
+	}{
+		"name",
+		21,
+	}
+
+	resp, err := Post("http://httpbin.org/post", JSON(jsonStruct))
+	if err != nil {
+		t.Errorf("Reqeust erro: got %v", err)
+	}
+
+	JSON, err := resp.SimpleJSON()
+	if err != nil {
+		t.Errorf("%v \n", err)
+	}
+	name, _ := JSON.Get("json").Get("name").String()
+	age, _ := JSON.Get("json").Get("age").Int()
+
+	assert.Equal(t, jsonStruct.Name, name)
+	assert.Equal(t, jsonStruct.Age, age)
+}
+
+func TestPut(t *testing.T) {
+	resp, err := Put("http://httpbin.org/put")
+	assert.Equal(t, err, nil)
+	assert.Equal(t, resp.Ok(), true)
+}
+
+func TestDelete(t *testing.T) {
+	resp, err := Delete("http://httpbin.org/delete")
+	assert.Equal(t, err, nil)
+	assert.Equal(t, resp.Ok(), true)
+}
+
+func TestPatch(t *testing.T) {
+	resp, err := Options("http://httpbin.org/patch")
+	assert.Equal(t, err, nil)
+	assert.Equal(t, resp.Ok(), true)
 }

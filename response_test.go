@@ -16,12 +16,10 @@ package requests4go
 import "testing"
 
 func TestResponse(t *testing.T) {
-	args := NewRequestArguments()
-	args.Params = map[string]string{
+	resp, err := Get("http://httpbin.org/get", Params(map[string]string{
 		"a": "1",
 		"b": "2",
-	}
-	resp, err := Get("http://httpbin.org/get", args)
+	}))
 
 	if err != nil {
 		t.Errorf("GET request error: got %s", err)
@@ -45,17 +43,5 @@ func TestResponse(t *testing.T) {
 
 	if string(content[:]) != text {
 		t.Errorf("Internal content error: \n text is %v, \n string of content is %v", text, content)
-	}
-
-	json, err := resp.SimpleJSON()
-
-	if err != nil {
-		t.Errorf("Response.Json error: %v", err)
-	}
-
-	agent, _ := json.Get("headers").Get("User-Agent").String()
-
-	if agent != "Request4go" {
-		t.Errorf("Response heeder error: excpeted Request4go, go %v", agent)
 	}
 }

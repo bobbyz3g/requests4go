@@ -14,7 +14,9 @@
 package requests4go
 
 import (
+	"golang.org/x/net/publicsuffix"
 	"net/http"
+	"net/http/cookiejar"
 )
 
 // Session allows user use cookies between HTTP requests.
@@ -26,7 +28,7 @@ type Session struct {
 func NewSession() *Session {
 	return &Session{
 		Client: &http.Client{
-			Jar: setDefaultJar(),
+			Jar: getDefaultJar(),
 		},
 	}
 }
@@ -100,4 +102,12 @@ func (s *Session) do(req *http.Request) (*Response, error) {
 		return nil, err
 	}
 	return NewResponse(resp), nil
+}
+
+func getDefaultJar() *cookiejar.Jar {
+	options := cookiejar.Options{
+		PublicSuffixList: publicsuffix.List,
+	}
+	jar, _ := cookiejar.New(&options)
+	return jar
 }
