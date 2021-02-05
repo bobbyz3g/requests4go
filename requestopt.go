@@ -19,6 +19,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 )
 
@@ -108,6 +109,20 @@ func Cookies(c map[string]string) RequestOption {
 	return func(req *http.Request) error {
 		for k, v := range c {
 			req.AddCookie(&http.Cookie{Name: k, Value: v})
+		}
+		return nil
+	}
+}
+
+// Data sends form-encoded data.
+func Data(form map[string]string) RequestOption {
+	return func(req *http.Request) error {
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		if len(req.PostForm) == 0 {
+			req.PostForm = make(url.Values)
+		}
+		for k, v := range form {
+			req.PostForm.Set(k, v)
 		}
 		return nil
 	}

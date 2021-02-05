@@ -130,5 +130,23 @@ func TestCookies(t *testing.T) {
 		assert.Equal(t, ok, true)
 		assert.Equal(t, value, cookie.Value)
 	}
+}
+
+func TestData(t *testing.T) {
+	f1 := map[string]string{
+		"a": "1",
+	}
+
+	f2 := map[string]string{
+		"a": "2",
+		"b": "2",
+	}
+
+	req, err := NewRequest("POST", "http://example.com", Data(f1), Data(f2))
+	assert.Equal(t, err, nil)
+
+	for k, v := range f2 {
+		assert.Equal(t, req.PostForm.Get(k), v)
+	}
 
 }
