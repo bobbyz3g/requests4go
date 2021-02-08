@@ -24,6 +24,8 @@ import (
 )
 
 // A RequestOption is represent a option of request.
+// You can use it to custom request.
+// You can also define your own RequestOption.
 type RequestOption func(req *http.Request) error
 
 // Params sets url query parameters for the request.

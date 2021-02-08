@@ -1,6 +1,7 @@
 # request4go
 
 ![test](https://github.com/Kaiser925/requests4go/workflows/test/badge.svg)
+[![Go Reference](https://pkg.go.dev/badge/github.com/Kaiser925/requests4go.svg)](https://pkg.go.dev/github.com/Kaiser925/requests4go)
 
 Go HTTP Requests. ✨🎉✨
 
@@ -63,7 +64,9 @@ fmt.Println(txt)
 
 ### JSON Response Content
 
-We can deal with JSON data by using [go-simplejson](https://github.com/bitly/go-simplejson).
+There are two methods to handle JSON response content.
+
+1. We can deal with SimpleJSON witch use [go-simplejson](https://github.com/bitly/go-simplejson) parse json data.
 
 ~~~go
 resp, _ := requests4go.Get("https://httpbin.org/get")
@@ -74,6 +77,15 @@ fmt.Println(url)
 // Output:
 // https://httpbin.org/get
 ~~~
+
+2. We can unmarshal the struct by using JSON.
+
+```go
+foo := &Foo{}
+resp, _ := requests4go.Get("https://example.com")
+j, _ := resp.JSON(foo)
+fmt.Println(j.bar)
+```
 
 License
 =======
