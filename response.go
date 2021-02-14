@@ -14,6 +14,7 @@
 package requests4go
 
 import (
+	"bytes"
 	"compress/gzip"
 	"compress/zlib"
 	"encoding/json"
@@ -31,6 +32,8 @@ import (
 type Response struct {
 	*http.Response
 
+	// content stores the response data.
+	// It used to multiple read the content of body.
 	content []byte
 }
 
@@ -53,16 +56,22 @@ func (r *Response) Close() error {
 	if err != nil {
 		return err
 	}
+	if r.Body == nil {
+		return nil
+	}
 	return r.Body.Close()
 }
 
 // Read is to support io.ReadCloser.
 func (r *Response) Read(p []byte) (n int, err error) {
-	return r.Body.Read(p)
+	content, err := r.loadContent()
+	if err != nil {
+		return 0, err
+	}
+	return bytes.NewReader(content).Read(p)
 }
 
-// Text returns content of response in string.
-// It will close response.
+// Text reads body of response and returns content of response in string.
 func (r *Response) Text() (string, error) {
 	content, err := r.loadContent()
 	if err != nil {
@@ -71,8 +80,7 @@ func (r *Response) Text() (string, error) {
 	return string(content), nil
 }
 
-// Content returns content of response in bytes.
-// It will close response.
+// Content reads body of response and returns content of response in bytes.
 func (r *Response) Content() ([]byte, error) {
 	content, err := r.loadContent()
 	if err != nil {
@@ -81,7 +89,7 @@ func (r *Response) Content() ([]byte, error) {
 	return content, nil
 }
 
-// JSON returns simplejson.Json.
+// JSON reads body of response and returns simplejson.Json.
 // See the usage of simplejson on https://godoc.org/github.com/bitly/go-simplejson.
 func (r *Response) SimpleJSON() (*simplejson.Json, error) {
 	content, err := r.loadContent()
@@ -91,7 +99,7 @@ func (r *Response) SimpleJSON() (*simplejson.Json, error) {
 	return simplejson.NewJson(content)
 }
 
-// SaveContent saves response body to file and closes the response.
+// SaveContent reads body of response and saves response body to file.
 func (r *Response) SaveContent(filename string) error {
 	f, err := os.Create(filename)
 	if err != nil {
@@ -111,7 +119,7 @@ func (r *Response) SaveContent(filename string) error {
 	return nil
 }
 
-// JSON unmarshal the response content to v.
+// JSON reads body of response and unmarshal the response content to v.
 func (r *Response) JSON(v interface{}) error {
 	content, err := r.loadContent()
 	if err != nil {
