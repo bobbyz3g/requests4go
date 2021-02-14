@@ -56,7 +56,7 @@ func (r *Response) Close() error {
 	return r.Body.Close()
 }
 
-// Read is to support io.ReadClose.
+// Read is to support io.ReadCloser.
 func (r *Response) Read(p []byte) (n int, err error) {
 	return r.Body.Read(p)
 }
@@ -81,7 +81,7 @@ func (r *Response) Content() ([]byte, error) {
 	return content, nil
 }
 
-// JSON returns simplejson.Json and closes the response.
+// JSON returns simplejson.Json.
 // See the usage of simplejson on https://godoc.org/github.com/bitly/go-simplejson.
 func (r *Response) SimpleJSON() (*simplejson.Json, error) {
 	content, err := r.loadContent()
@@ -127,7 +127,6 @@ func (r *Response) loadContent() ([]byte, error) {
 	var reader io.ReadCloser
 
 	defer func() {
-		r.Close()
 		reader.Close()
 	}()
 
