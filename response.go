@@ -141,15 +141,15 @@ func (r *Response) loadContent() ([]byte, error) {
 	var err error
 	switch r.Header.Get("Content-Encoding") {
 	case "gzip":
-		if reader, err = gzip.NewReader(r); err != nil {
+		if reader, err = gzip.NewReader(r.Body); err != nil {
 			return nil, err
 		}
 	case "deflate":
-		if reader, err = zlib.NewReader(r); err != nil {
+		if reader, err = zlib.NewReader(r.Body); err != nil {
 			return nil, err
 		}
 	default:
-		reader = r
+		reader = r.Body
 	}
 	content, err := ioutil.ReadAll(reader)
 	if err != nil && err != io.EOF {
