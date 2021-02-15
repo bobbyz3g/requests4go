@@ -14,9 +14,6 @@
 package requests4go
 
 import (
-	"bytes"
-	"compress/gzip"
-	"compress/zlib"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -31,17 +28,12 @@ import (
 // It opens up new methods for http.Response.
 type Response struct {
 	*http.Response
-
-	// content stores the response data.
-	// It used to multiple read the content of body.
-	content []byte
 }
 
 // NewResponse returns new Response
 func NewResponse(resp *http.Response) *Response {
 	return &Response{
 		resp,
-		nil,
 	}
 }
 
@@ -64,16 +56,12 @@ func (r *Response) Close() error {
 
 // Read is to support io.ReadCloser.
 func (r *Response) Read(p []byte) (n int, err error) {
-	content, err := r.loadContent()
-	if err != nil {
-		return 0, err
-	}
-	return bytes.NewReader(content).Read(p)
+	return r.Body.Read(p)
 }
 
 // Text reads body of response and returns content of response in string.
 func (r *Response) Text() (string, error) {
-	content, err := r.loadContent()
+	content, err := r.Content()
 	if err != nil {
 		return "", err
 	}
@@ -82,8 +70,8 @@ func (r *Response) Text() (string, error) {
 
 // Content reads body of response and returns content of response in bytes.
 func (r *Response) Content() ([]byte, error) {
-	content, err := r.loadContent()
-	if err != nil {
+	content, err := ioutil.ReadAll(r.Body)
+	if err != nil && err != io.EOF {
 		return nil, err
 	}
 	return content, nil
@@ -92,7 +80,7 @@ func (r *Response) Content() ([]byte, error) {
 // JSON reads body of response and returns simplejson.Json.
 // See the usage of simplejson on https://godoc.org/github.com/bitly/go-simplejson.
 func (r *Response) SimpleJSON() (*simplejson.Json, error) {
-	content, err := r.loadContent()
+	content, err := r.Content()
 	if err != nil {
 		return nil, fmt.Errorf("Json error: %w", err)
 	}
@@ -107,13 +95,7 @@ func (r *Response) SaveContent(filename string) error {
 	}
 	defer f.Close()
 
-	content, err := r.loadContent()
-	if err != nil {
-		return err
-	}
-
-	_, err = f.Write(content)
-	if err != nil {
+	if _, err := io.Copy(f, r.Body); err != nil {
 		return err
 	}
 	return nil
@@ -121,40 +103,17 @@ func (r *Response) SaveContent(filename string) error {
 
 // JSON reads body of response and unmarshal the response content to v.
 func (r *Response) JSON(v interface{}) error {
-	content, err := r.loadContent()
+	content, err := r.readBody()
 	if err != nil {
 		return err
 	}
 	return json.Unmarshal(content, v)
 }
 
-func (r *Response) loadContent() ([]byte, error) {
-	if r.content != nil {
-		return r.content, nil
-	}
-	var reader io.ReadCloser
-
-	defer func() {
-		reader.Close()
-	}()
-
-	var err error
-	switch r.Header.Get("Content-Encoding") {
-	case "gzip":
-		if reader, err = gzip.NewReader(r.Body); err != nil {
-			return nil, err
-		}
-	case "deflate":
-		if reader, err = zlib.NewReader(r.Body); err != nil {
-			return nil, err
-		}
-	default:
-		reader = r.Body
-	}
-	content, err := ioutil.ReadAll(reader)
+func (r *Response) readBody() ([]byte, error) {
+	content, err := ioutil.ReadAll(r.Body)
 	if err != nil && err != io.EOF {
 		return nil, err
 	}
-	r.content = content
 	return content, nil
 }

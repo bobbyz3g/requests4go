@@ -13,7 +13,10 @@
 
 package requests4go
 
-import "testing"
+import (
+	"github.com/stretchr/testify/assert"
+	"testing"
+)
 
 func TestResponse(t *testing.T) {
 	resp, err := Get("http://httpbin.org/get", Params(map[string]string{
@@ -25,23 +28,9 @@ func TestResponse(t *testing.T) {
 		t.Errorf("GET request error: got %s", err)
 	}
 
-	if flag := resp.Ok(); !flag {
-		t.Errorf("GET request status error: excepted %v, got %v", true, flag)
-	}
-
+	assert.Equal(t, err, nil)
+	assert.Equal(t, resp.Ok(), true)
 	text, err := resp.Text()
-
-	if err != nil {
-		t.Errorf("Response.Text() error: got %s", err)
-	}
-
-	content, err := resp.Content()
-
-	if err != nil {
-		t.Errorf("Response.Content() error: got %s", err)
-	}
-
-	if string(content[:]) != text {
-		t.Errorf("Internal content error: \n text is %v, \n string of content is %v", text, content)
-	}
+	assert.NotEqual(t, text, "")
+	assert.Equal(t, err, nil)
 }
