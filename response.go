@@ -103,17 +103,9 @@ func (r *Response) SaveContent(filename string) error {
 
 // JSON reads body of response and unmarshal the response content to v.
 func (r *Response) JSON(v interface{}) error {
-	content, err := r.readBody()
+	content, err := r.Content()
 	if err != nil {
 		return err
 	}
 	return json.Unmarshal(content, v)
-}
-
-func (r *Response) readBody() ([]byte, error) {
-	content, err := ioutil.ReadAll(r.Body)
-	if err != nil && err != io.EOF {
-		return nil, err
-	}
-	return content, nil
 }
