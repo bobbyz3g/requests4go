@@ -20,6 +20,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -149,4 +150,21 @@ func TestData(t *testing.T) {
 		assert.Equal(t, req.PostForm.Get(k), v)
 	}
 
+}
+
+func TestBody(t *testing.T) {
+	body := strings.NewReader("test string body")
+	req, err := NewRequest("GET", "http://example.com", Body(body))
+	assert.Nil(t, err)
+
+	req2, err := http.NewRequest("GET", "http://example.com", body)
+	assert.Nil(t, err)
+
+	assert.Equal(t, req2.Body, req.Body)
+	b, err := req.GetBody()
+	assert.Nil(t, err)
+	b2, err := req2.GetBody()
+	assert.Nil(t, err)
+
+	assert.Equal(t, b2, b)
 }

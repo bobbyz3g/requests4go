@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 )
 
 // A RequestOption is represent a option of request.
@@ -81,7 +82,8 @@ func JSON(v interface{}) RequestOption {
 	}
 }
 
-// File sets request body be file content.
+// File loads file content, and set it be request body.
+// File is not used to post multipart/form-data.
 func File(filename string) RequestOption {
 	return func(req *http.Request) error {
 		f, err := os.Open(filename)
@@ -126,6 +128,44 @@ func Data(form map[string]string) RequestOption {
 		for k, v := range form {
 			req.PostForm.Set(k, v)
 		}
+		return nil
+	}
+}
+
+// Body sets request body.
+func Body(body io.Reader) RequestOption {
+	return func(req *http.Request) error {
+		rc, ok := body.(io.ReadCloser)
+		if !ok && body != nil {
+			rc = io.NopCloser(body)
+		}
+		req.Body = rc
+		switch v := body.(type) {
+		case *bytes.Buffer:
+			req.ContentLength = int64(v.Len())
+			buf := v.Bytes()
+			req.GetBody = func() (io.ReadCloser, error) {
+				r := bytes.NewReader(buf)
+				return io.NopCloser(r), nil
+			}
+		case *bytes.Reader:
+			req.ContentLength = int64(v.Len())
+			snapshot := *v
+			req.GetBody = func() (io.ReadCloser, error) {
+				r := snapshot
+				return io.NopCloser(&r), nil
+			}
+		case *strings.Reader:
+			req.ContentLength = int64(v.Len())
+			snapshot := *v
+			req.GetBody = func() (io.ReadCloser, error) {
+				r := snapshot
+				return io.NopCloser(&r), nil
+			}
+		default:
+			// See comment of http.NewRequestWithContext
+		}
+
 		return nil
 	}
 }

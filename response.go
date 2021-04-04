@@ -77,7 +77,7 @@ func (r *Response) Content() ([]byte, error) {
 	return content, nil
 }
 
-// JSON reads body of response and returns simplejson.Json.
+// SimpleJSON reads body of response and returns simplejson.Json.
 // See the usage of simplejson on https://godoc.org/github.com/bitly/go-simplejson.
 func (r *Response) SimpleJSON() (*simplejson.Json, error) {
 	content, err := r.Content()
