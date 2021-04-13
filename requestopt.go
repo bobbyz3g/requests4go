@@ -82,9 +82,8 @@ func JSON(v interface{}) RequestOption {
 	}
 }
 
-// File loads file content, and set it be request body.
-// File is not used to post multipart/form-data.
-func File(filename string) RequestOption {
+// FileContent loads file content, and set it be request body.
+func FileContent(filename string) RequestOption {
 	return func(req *http.Request) error {
 		f, err := os.Open(filename)
 		if err != nil {

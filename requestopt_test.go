@@ -101,7 +101,7 @@ func TestJSON(t *testing.T) {
 
 func TestFile(t *testing.T) {
 	filename := "testdata/file4upload"
-	req, err := NewRequest("POST", "http://example.com", File(filename))
+	req, err := NewRequest("POST", "http://example.com", FileContent(filename))
 	assert.Equal(t, err, nil)
 
 	f, err := os.Open(filename)
