@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"io"
 	"io/ioutil"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
@@ -96,14 +97,42 @@ func FileContent(filename string) RequestOption {
 		if _, err := io.Copy(b, f); err != nil {
 			return err
 		}
-		req.ContentLength = int64(b.Len())
-		req.Body = ioutil.NopCloser(b)
-		snapshot := *b
-		req.GetBody = func() (io.ReadCloser, error) {
-			r := snapshot
-			return ioutil.NopCloser(&r), nil
+		return setRequestBody(req, b)
+	}
+}
+
+// MultipartForm sets a multipart/form-data request body.
+func MultipartForm(form map[string]io.Reader) RequestOption {
+	return func(req *http.Request) error {
+		var b bytes.Buffer
+		var err error
+		w := multipart.NewWriter(&b)
+		for k, v := range form {
+			var fw io.Writer
+			if x, ok := v.(io.Closer); ok {
+				defer x.Close()
+			}
+
+			if x, ok := v.(*os.File); ok {
+				if fw, err = w.CreateFormFile(k, x.Name()); err != nil {
+					return err
+				}
+			} else {
+				if fw, err = w.CreateFormField(k); err != nil {
+					return err
+				}
+			}
+			if _, err = io.Copy(fw, v); err != nil {
+				return err
+			}
 		}
-		return nil
+		// Must close multipart.Writer before set body.
+		// Otherwise will cause body length not equal error.
+		if err := w.Close(); err != nil {
+			return err
+		}
+		req.Header.Set("Content-Type", w.FormDataContentType())
+		return setRequestBody(req, &b)
 	}
 }
 
@@ -134,37 +163,41 @@ func Data(form map[string]string) RequestOption {
 // Body sets request body.
 func Body(body io.Reader) RequestOption {
 	return func(req *http.Request) error {
-		rc, ok := body.(io.ReadCloser)
-		if !ok && body != nil {
-			rc = io.NopCloser(body)
-		}
-		req.Body = rc
-		switch v := body.(type) {
-		case *bytes.Buffer:
-			req.ContentLength = int64(v.Len())
-			buf := v.Bytes()
-			req.GetBody = func() (io.ReadCloser, error) {
-				r := bytes.NewReader(buf)
-				return io.NopCloser(r), nil
-			}
-		case *bytes.Reader:
-			req.ContentLength = int64(v.Len())
-			snapshot := *v
-			req.GetBody = func() (io.ReadCloser, error) {
-				r := snapshot
-				return io.NopCloser(&r), nil
-			}
-		case *strings.Reader:
-			req.ContentLength = int64(v.Len())
-			snapshot := *v
-			req.GetBody = func() (io.ReadCloser, error) {
-				r := snapshot
-				return io.NopCloser(&r), nil
-			}
-		default:
-			// See comment of http.NewRequestWithContext
-		}
-
-		return nil
+		return setRequestBody(req, body)
 	}
+}
+
+func setRequestBody(req *http.Request, body io.Reader) error {
+	rc, ok := body.(io.ReadCloser)
+	if !ok && body != nil {
+		rc = io.NopCloser(body)
+	}
+	req.Body = rc
+	switch v := body.(type) {
+	case *bytes.Buffer:
+		req.ContentLength = int64(v.Len())
+		buf := v.Bytes()
+		req.GetBody = func() (io.ReadCloser, error) {
+			r := bytes.NewReader(buf)
+			return io.NopCloser(r), nil
+		}
+	case *bytes.Reader:
+		req.ContentLength = int64(v.Len())
+		snapshot := *v
+		req.GetBody = func() (io.ReadCloser, error) {
+			r := snapshot
+			return io.NopCloser(&r), nil
+		}
+	case *strings.Reader:
+		req.ContentLength = int64(v.Len())
+		snapshot := *v
+		req.GetBody = func() (io.ReadCloser, error) {
+			r := snapshot
+			return io.NopCloser(&r), nil
+		}
+	default:
+		// See comment of http.NewRequestWithContext
+	}
+
+	return nil
 }

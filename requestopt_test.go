@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/stretchr/testify/assert"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -167,4 +168,24 @@ func TestBody(t *testing.T) {
 	assert.Nil(t, err)
 
 	assert.Equal(t, b2, b)
+}
+
+func TestMultipartForm(t *testing.T) {
+	f, err := os.Open("testdata/file4upload")
+	assert.Nil(t, err)
+	form := MultipartForm(map[string]io.Reader{
+		"field1": strings.NewReader("value1"),
+		"field2": strings.NewReader("value2"),
+		"file1":  f,
+	})
+
+	req, err := NewRequest("POST", "http://example.com", form)
+	assert.Nil(t, err)
+
+	body, err := req.GetBody()
+	assert.Nil(t, err)
+	n, err := io.ReadAll(body)
+	assert.Nil(t, err)
+	assert.Equal(t, int64(len(n)), req.ContentLength)
+	_ = body.Close()
 }
