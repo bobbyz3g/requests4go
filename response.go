@@ -15,6 +15,7 @@ package requests4go
 
 import (
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -108,4 +109,13 @@ func (r *Response) JSON(v interface{}) error {
 		return err
 	}
 	return json.Unmarshal(content, v)
+}
+
+// XML unmarshal the response content as XML.
+func (r *Response) XML(v interface{}) error {
+	content, err := r.Content()
+	if err != nil {
+		return err
+	}
+	return xml.Unmarshal(content, v)
 }
