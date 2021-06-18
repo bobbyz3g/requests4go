@@ -35,3 +35,6 @@ var (
 	// ErrRedirectLimitExceeded will be returned when redirect times over limit.
 	ErrRedirectLimitExceeded = errors.New("requests4go: Request exceeded redirect count limit")
 )
+
+// M is a shortcut for map[string]string
+type M = map[string]string
