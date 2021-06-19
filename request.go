@@ -26,7 +26,7 @@ func NewRequest(method, url string, opts ...RequestOption) (*http.Request, error
 // NewRequestWithContext builds a new *http.Request with Context and RequestOption
 //
 // Note:
-// If multiple option will modify the request body,
+// If there are multiple options will modify the request body,
 // only the last one will take effect.
 // The order of options all will effect final request status.
 func NewRequestWithContext(ctx context.Context, method, url string, opts ...RequestOption) (*http.Request, error) {

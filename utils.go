@@ -13,28 +13,10 @@
 
 package requests4go
 
-import (
-	"errors"
-)
-
-const (
-	defaultUserAgent     = "Request4go"
-	defaultContentType   = "application/x-www-form-urlencoded; charset=utf-8"
-	defaultJSONType      = "application/json; charset=utf-8"
-	defaultRedirectLimit = 10
-)
-
-var (
-	defaultHeaders = map[string]string{
-		"Connection":      "keep-alive",
-		"Accept-Encoding": "gzip, deflate",
-		"Accept":          "*/*",
-		"User-Agent":      defaultUserAgent,
-	}
-
-	// ErrRedirectLimitExceeded will be returned when redirect times over limit.
-	ErrRedirectLimitExceeded = errors.New("requests4go: Request exceeded redirect count limit")
-)
-
 // M is a shortcut for map[string]string
 type M = map[string]string
+
+const (
+	// AppJSON is a shortcut for "application/json"
+	AppJSON = "application/json"
+)

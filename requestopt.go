@@ -17,7 +17,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -71,15 +70,8 @@ func JSON(v interface{}) RequestOption {
 			return err
 		}
 		v := bytes.NewReader(b)
-		req.ContentLength = int64(v.Len())
-		req.Body = ioutil.NopCloser(v)
-		snapshot := *v
-		req.GetBody = func() (io.ReadCloser, error) {
-			r := snapshot
-			return ioutil.NopCloser(&r), nil
-		}
-		req.Header.Set("Content-Type", "application/json")
-		return nil
+		req.Header.Set("Content-Type", AppJSON)
+		return setRequestBody(req, v)
 	}
 }
 
