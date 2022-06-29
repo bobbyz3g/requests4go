@@ -33,50 +33,6 @@ func TestBaseGet(t *testing.T) {
 	assert.Equal(t, true, resp.Ok())
 }
 
-func TestCookieGet(t *testing.T) {
-	resp, err := Get("http://httpbin.org/cookies", Cookies(testMap))
-
-	if err != nil {
-		t.Fatalf("Request error: %v", err)
-	}
-
-	JSON, err := resp.SimpleJSON()
-	if err != nil {
-		t.Fatalf("Get json error: %v", err)
-	}
-
-	name, _ := JSON.Get("cookies").Get("name").String()
-	age, _ := JSON.Get("cookies").Get("age").String()
-
-	assert.Equal(t, testMap["name"], name)
-	assert.Equal(t, testMap["age"], age)
-}
-
-func TestBaseJsonPost(t *testing.T) {
-	jsonStruct := struct {
-		Name string `json:"name"`
-		Age  int    `json:"age"`
-	}{
-		"name",
-		21,
-	}
-
-	resp, err := Post("http://httpbin.org/post", JSON(jsonStruct))
-	if err != nil {
-		t.Errorf("Reqeust erro: got %v", err)
-	}
-
-	JSON, err := resp.SimpleJSON()
-	if err != nil {
-		t.Errorf("%v \n", err)
-	}
-	name, _ := JSON.Get("json").Get("name").String()
-	age, _ := JSON.Get("json").Get("age").Int()
-
-	assert.Equal(t, jsonStruct.Name, name)
-	assert.Equal(t, jsonStruct.Age, age)
-}
-
 func TestPut(t *testing.T) {
 	resp, err := Put("http://httpbin.org/put")
 	assert.Equal(t, err, nil)

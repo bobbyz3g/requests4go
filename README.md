@@ -81,26 +81,40 @@ txt, _ := resp.Text()
 log.Println(txt)
 ~~~
 
-### JSON Response Content
+### Decode Response Content
 
 There are two methods to handle JSON response content.
 
-1. We can deal with SimpleJSON witch use [go-simplejson](https://github.com/bitly/go-simplejson) parse json data.
-
-~~~go
-resp, _ := requests4go.Get("https://httpbin.org/get")
-j, _ := resp.SimpleJSON()
-url, _ := j.Get("url").String()
-log.Println(url)
-~~~
-
-2. We can unmarshal the struct by using JSON.
+1. We can unmarshal the struct by using JSON.
 
 ```go
 foo := &Foo{}
 resp, _ := requests4go.Get("https://example.com")
-j, _ := resp.JSON(foo)
-log.Println(j.bar)
+j, _ := resp.JSON(&foo)
+fmt.Printf("%v\n", foo)
+```
+
+2. Struct implements Unmarshaler.
+
+```go
+package foo
+
+type Foo struct {}
+
+type (f *Foo) Unmarshal(p []byte) error {
+	// ... unmarshal logic
+	return nil
+}
+
+func F() {
+	f := &Foo{}
+	resp, _ := requests4go.Get("https://example.com")
+	err := resp.Unmarshal(f)
+	if err != nil {
+		// error handle
+    }
+	fmt.Printf("%v\n", foo)
+}
 ```
 
 License

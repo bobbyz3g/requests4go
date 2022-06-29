@@ -16,13 +16,10 @@ package requests4go
 import (
 	"encoding/json"
 	"encoding/xml"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
-
-	"github.com/bitly/go-simplejson"
 )
 
 // Response is a wrapper of the http.Response.
@@ -78,16 +75,6 @@ func (r *Response) Content() ([]byte, error) {
 	return content, nil
 }
 
-// SimpleJSON reads body of response and returns simplejson.Json.
-// See the usage of simplejson on https://godoc.org/github.com/bitly/go-simplejson.
-func (r *Response) SimpleJSON() (*simplejson.Json, error) {
-	content, err := r.Content()
-	if err != nil {
-		return nil, fmt.Errorf("Json error: %w", err)
-	}
-	return simplejson.NewJson(content)
-}
-
 // SaveContent reads body of response and saves response body to file.
 func (r *Response) SaveContent(filename string) error {
 	f, err := os.Create(filename)
@@ -118,4 +105,18 @@ func (r *Response) XML(v interface{}) error {
 		return err
 	}
 	return xml.Unmarshal(content, v)
+}
+
+// Unmarshaler is the interface implemented by types
+// that can unmarshal from response content.
+type Unmarshaler interface {
+	Unmarshal([]byte) error
+}
+
+func (r *Response) Unmarshal(u Unmarshaler) error {
+	content, err := r.Content()
+	if err != nil {
+		return err
+	}
+	return u.Unmarshal(content)
 }
