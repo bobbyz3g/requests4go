@@ -25,6 +25,8 @@ import (
 // Response is a wrapper of the http.Response.
 // It opens up new methods for http.Response.
 type Response struct {
+	// Embed an HTTP response directly. This makes a *http.Response act exactly
+	// like an *http.Response so that all meta methods are supported.
 	*http.Response
 }
 
