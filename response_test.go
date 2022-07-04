@@ -15,6 +15,7 @@ package requests4go
 
 import (
 	"bufio"
+	"errors"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"strings"
@@ -212,6 +213,102 @@ func TestResponse_Content(t *testing.T) {
 		}
 		if len(p) != 0 {
 			t.Errorf("#%s: Body = %q want []", name, p)
+		}
+	}
+}
+
+func TestResponse_JSON(t *testing.T) {
+	var testcases = map[string]struct {
+		Raw  string
+		Resp http.Response
+		Err  error
+		Data respData
+	}{
+		"json body": {
+			Raw: "HTTP/1.0 200 OK\r\n" +
+				"Connection: close\r\n" +
+				"Content-Type: application/json\r\n" +
+				"\r\n" +
+				"{\"name\": \"foo\", \"age\": 10}\n",
+			Resp: http.Response{
+				Status:     "200 OK",
+				StatusCode: 200,
+				Proto:      "HTTP/1.0",
+				ProtoMajor: 1,
+				ProtoMinor: 0,
+				Request:    dummyReq("GET"),
+				Header: http.Header{
+					"Connection": {"close"},
+				},
+				Close:         true,
+				ContentLength: -1,
+			},
+			Err: nil,
+			Data: respData{
+				Name: "foo",
+				Age:  10,
+			},
+		},
+		"content type not application/json": {
+			Raw: "HTTP/1.0 200 OK\r\n" +
+				"Connection: close\r\n" +
+				"\r\n" +
+				"{\"name\": \"foo\", \"age\": 10}\n",
+			Resp: http.Response{
+				Status:     "200 OK",
+				StatusCode: 200,
+				Proto:      "HTTP/1.0",
+				ProtoMajor: 1,
+				ProtoMinor: 0,
+				Request:    dummyReq("GET"),
+				Header: http.Header{
+					"Connection": {"close"},
+				},
+				Close:         true,
+				ContentLength: -1,
+			},
+			Err:  errors.New("content type not application/json"),
+			Data: respData{},
+		},
+		"json not valid": {
+			Raw: "HTTP/1.0 200 OK\r\n" +
+				"Connection: close\r\n" +
+				"Content-Type: application/json\r\n" +
+				"\r\n" +
+				"{\"name\": \"foo\", \"age\": 10,}\n",
+			Resp: http.Response{
+				Status:     "200 OK",
+				StatusCode: 200,
+				Proto:      "HTTP/1.0",
+				ProtoMajor: 1,
+				ProtoMinor: 0,
+				Request:    dummyReq("GET"),
+				Header: http.Header{
+					"Connection": {"close"},
+				},
+				Close:         true,
+				ContentLength: -1,
+			},
+			Err:  errors.New("invalid character '}' looking for beginning of object key string"),
+			Data: respData{},
+		},
+	}
+
+	for name, tc := range testcases {
+		hresp, err := http.ReadResponse(bufio.NewReader(strings.NewReader(tc.Raw)), tc.Resp.Request)
+		if err != nil {
+			t.Errorf("#%s: %v", name, err)
+			continue
+		}
+		resp := NewResponse(hresp)
+		var data respData
+
+		if err := resp.JSON(&data); err != nil && err.Error() != tc.Err.Error() {
+			t.Errorf("#%s: Error = %v want error = %s", name, err, tc.Err)
+		}
+
+		if data != tc.Data {
+			t.Errorf("#%s: Data = %v want data = %v", name, data, tc.Data)
 		}
 	}
 }

@@ -16,11 +16,14 @@ package requests4go
 import (
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
 )
+
+var ErrNotJSONContent = errors.New("content type not application/json")
 
 // Response is a wrapper of the http.Response.
 // It opens up new methods for http.Response.
@@ -93,6 +96,10 @@ func (r *Response) SaveContent(filename string) error {
 
 // JSON reads body of response and unmarshal the response content to v.
 func (r *Response) JSON(v interface{}) error {
+	ct := r.Header.Get("Content-Type")
+	if ct != AppJSON {
+		return errors.New("content type not application/json")
+	}
 	content, err := r.Content()
 	if err != nil {
 		return err
