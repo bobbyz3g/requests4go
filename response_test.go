@@ -15,9 +15,11 @@ package requests4go
 
 import (
 	"bufio"
+	"encoding/json"
 	"errors"
 	"github.com/stretchr/testify/assert"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 )
@@ -38,7 +40,14 @@ func dummyReq(method string) *http.Request {
 }
 
 func TestResponse(t *testing.T) {
-	resp, err := Get("http://httpbin.org/get", Params(map[string]string{
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := json.Marshal(map[string]string{
+			"test": "json",
+		})
+		w.Write(b)
+	}))
+	defer ts.Close()
+	resp, err := Get(ts.URL, Params(map[string]string{
 		"a": "1",
 		"b": "2",
 	}))

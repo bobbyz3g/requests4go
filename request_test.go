@@ -15,6 +15,9 @@ package requests4go
 
 import (
 	"github.com/stretchr/testify/assert"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 )
 
@@ -24,29 +27,51 @@ var testMap = map[string]string{
 }
 
 func TestBaseGet(t *testing.T) {
-	resp, err := Get("http://httpbin.org/get")
+	body := []byte("Hello, client")
 
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write(body)
+	}))
+
+	defer ts.Close()
+
+	resp, err := Get(ts.URL)
 	if err != nil {
 		t.Errorf("Get error: excepted no error, got %v", err)
 	}
 
-	assert.Equal(t, true, resp.Ok())
+	defer resp.Close()
+	b, _ := io.ReadAll(resp.Body)
+
+	assert.Equal(t, body, b)
 }
 
 func TestPut(t *testing.T) {
-	resp, err := Put("http://httpbin.org/put")
-	assert.Equal(t, err, nil)
-	assert.Equal(t, resp.Ok(), true)
+	m := ""
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		m = r.Method
+	}))
+	defer ts.Close()
+	_, _ = Put(ts.URL)
+	assert.Equal(t, http.MethodPut, m)
 }
 
 func TestDelete(t *testing.T) {
-	resp, err := Delete("http://httpbin.org/delete")
-	assert.Equal(t, err, nil)
-	assert.Equal(t, resp.Ok(), true)
+	m := ""
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		m = r.Method
+	}))
+	defer ts.Close()
+	_, _ = Delete(ts.URL)
+	assert.Equal(t, http.MethodDelete, m)
 }
 
 func TestPatch(t *testing.T) {
-	resp, err := Options("http://httpbin.org/patch")
-	assert.Equal(t, err, nil)
-	assert.Equal(t, resp.Ok(), true)
+	m := ""
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		m = r.Method
+	}))
+	defer ts.Close()
+	_, _ = Patch(ts.URL)
+	assert.Equal(t, http.MethodPatch, m)
 }
