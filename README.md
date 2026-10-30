@@ -200,10 +200,57 @@ core. No entrypoint automatically converts non-2xx statuses into errors, reads o
 caches a response, or closes a successful response for the caller. Existing request
 option order, form merging and body replacement behavior remain unchanged.
 
-### Fluent API design (planned, not yet implemented)
+### Fluent requests
 
-The next stages add a fluent layer over `Client.Request` and `Client.Do`. The
-existing API will remain supported. The intended call shape is:
+`Client.NewRequest(ctx)` builds a request through chained setters. `Send` attempts
+it once and returns a `Result`; `Response` returns the first error or transfers the
+response to the caller:
+
+```go
+client := requests4go.NewClient(nil)
+resp, err := client.NewRequest(ctx).
+	Post("https://httpbin.org/post?source=example").
+	Header("Accept", "application/json").
+	Query(url.Values{"tag": {"go", "http"}}).
+	JSON(map[string]any{"name": "Alice"}).
+	Send().
+	Response()
+if err != nil {
+	return err
+}
+defer resp.Close()
+text, err := resp.Text()
+if err != nil {
+	return err
+}
+fmt.Println(text)
+```
+
+The snippet uses `net/url` and the caller's `ctx`. `Request(method, url)` supports
+custom methods; Get, Post, Put, Patch, Delete, Head and Options are shortcuts.
+`Header` replaces a header's values; `Headers(http.Header)` copies multiple values.
+`Query(url.Values)` replaces values for supplied keys and preserves other URL keys.
+`JSON`, `Form(url.Values)` and `Body(io.Reader)` select one body source. Selecting
+another body records `ErrBodyAlreadySet`, including repeated Form calls; the old
+`Data` request option still merges fields as before. JSON/Form set Content-Type;
+a later Header call can override it.
+
+Setters do no work after the first error or after Send. Send reports construction
+errors without sending; calling it again returns `ErrRequestSent` without changing
+the first Result. The builder is single-use even when the first attempt fails.
+Go still evaluates arguments to skipped setters.
+
+If retaining the Result instead of immediately transferring its response, call
+`Close()` to release it. Close does not read the remaining response and returns any
+request or cleanup error. Repeated Close does not close again. After Response
+transfers ownership, Result.Close is harmless and the caller must close the response.
+Repeated Response calls return `ErrResultConsumed`; a stored failure is returned
+unchanged. A zero Result is empty and a RequestBuilder must be created by NewRequest.
+
+### Fluent response design (next stage)
+
+RequestBuilder, Send, Result.Response and Result.Close are implemented. Stage 4
+will add status checks and automatic-closing read terminals. The intended shape is:
 
 ```text
 value, err := client.NewRequest(ctx).
@@ -216,14 +263,14 @@ value, err := client.NewRequest(ctx).
 
 The minimal surface and ownership rules are:
 
-| Stage | Planned operations | Contract |
+| Stage | Operations | Contract |
 | --- | --- | --- |
-| RequestBuilder | Get/Post/etc., Header, Query, JSON, Form, Body | Mutable, per-request, not safe for concurrent use. Retains its context and first error. No network activity before Send. |
-| Send | Returns a non-nil Result, including on error | Single use; repeated sends fail without sending again. Builds through the shared request core. |
-| Result checks | Require2xx, RequireStatus | First failure stops subsequent work and closes any owned response. Status checking is explicit. |
-| Result terminals | Text, Bytes, DecodeJSON[T], DecodeJSONInto, Discard | Consume once and close on both success and failure; return the first error. Discard closes without unbounded draining. |
-| Response escape | Response() | Transfers ownership to the caller, who must close the response. The Result can no longer consume or close it. |
-| Explicit cleanup | Close() | Releases an unconsumed Result without reading it. A chain abandoned after Send still requires cleanup. |
+| RequestBuilder (available) | Request, Get/Post/etc., Header, Headers, Query, JSON, Form, Body | Mutable, per-request, not safe for concurrent use. Retains its context and first error. No network activity before Send. |
+| Send (available) | Returns a non-nil Result, including on error | Single use; repeated sends fail without sending again. Builds through the shared request core. |
+| Result checks (planned) | Require2xx, RequireStatus | First failure stops subsequent work and closes any owned response. Status checking is explicit. |
+| Result terminals (planned) | Text, Bytes, DecodeJSON[T], DecodeJSONInto, Discard | Consume once and close on both success and failure; return the first error. Discard closes without unbounded draining. |
+| Response escape (available) | Response() | Transfers ownership to the caller, who must close the response. The Result can no longer consume or close it. |
+| Explicit cleanup (available) | Close() | Releases an unconsumed Result without reading it. A chain abandoned after Send still requires cleanup. |
 
 Further contract decisions:
 
@@ -234,7 +281,8 @@ Further contract decisions:
 - Methods after a recorded error do no work. Go still evaluates their arguments
   before calling them; argument-expression side effects cannot be short-circuited.
 - JSON and form setters encode a snapshot; header and query setters copy values.
-  Reader bodies remain one-shot streams, and path-based files open at Send time.
+  Reader bodies retain standard library replay support for bytes/string readers;
+  arbitrary streams are not made replayable. Future path-based files open at Send time.
   A second body source is an error in the new builder only. Old RequestOptions
   retain their existing replacement and form-merging rules.
 - A caller retains ownership of an accepted Reader before Send. Calling Send
@@ -250,8 +298,8 @@ Further contract decisions:
 - There is no implicit retry, default status rejection, base URL resolution, or
   garbage-collection-based cleanup. Request URLs follow net/http semantics.
 
-Stages 3 and 4 will implement these types and methods. Streaming upload and file
-save terminals remain later work; they are not required for the initial fluent API.
+Streaming upload helpers and file save terminals remain later work; they are not
+required for the initial fluent API.
 
 License
 =======
