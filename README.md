@@ -163,6 +163,96 @@ func F() error {
 }
 ```
 
+### Configured clients and context
+
+`Client` wraps a standard `*http.Client` without copying or modifying it. Configure
+timeouts, redirects, proxies, transports and cookie jars through the standard
+library client before use:
+
+```go
+client := requests4go.NewClient(&http.Client{Timeout: 10 * time.Second})
+resp, err := client.Request(ctx, http.MethodGet, "https://httpbin.org/get",
+	requests4go.Params(requests4go.M{"page": "1"}))
+if err != nil {
+	return err
+}
+defer resp.Close()
+```
+
+Here `ctx` is the caller's non-nil `context.Context`; the snippet also uses
+`net/http` and `time`. To send an existing `*http.Request`, use `client.Do(req)`.
+Its context controls the request and response body reads. Cancellation and timeout
+errors retain standard library error identities for `errors.Is` and `errors.As`.
+
+The zero value of `Client` and `NewClient(nil)` use a shared default HTTP client,
+with no timeout or cookie jar. This client is independent of `http.DefaultClient`.
+Clients can be reused concurrently if their underlying transport supports it;
+do not mutate client configuration during use. Each response belongs to its caller.
+
+`NewSession()` still creates a cookie jar. Its existing methods remain available,
+and `session.Request(ctx, method, url, opts...)` and `session.Do(req)` use the same
+current `session.Client`, including its jar and policies. Replacing that field
+between requests remains supported. Setting it to nil selects the shared default
+client without cookies.
+
+Existing package-level methods keep their signatures and use the same execution
+core. No entrypoint automatically converts non-2xx statuses into errors, reads or
+caches a response, or closes a successful response for the caller. Existing request
+option order, form merging and body replacement behavior remain unchanged.
+
+### Fluent API design (planned, not yet implemented)
+
+The next stages add a fluent layer over `Client.Request` and `Client.Do`. The
+existing API will remain supported. The intended call shape is:
+
+```text
+value, err := client.NewRequest(ctx).
+    Post(url).
+    JSON(payload).
+    Send().
+    Require2xx().
+    DecodeJSON[Value]()
+```
+
+The minimal surface and ownership rules are:
+
+| Stage | Planned operations | Contract |
+| --- | --- | --- |
+| RequestBuilder | Get/Post/etc., Header, Query, JSON, Form, Body | Mutable, per-request, not safe for concurrent use. Retains its context and first error. No network activity before Send. |
+| Send | Returns a non-nil Result, including on error | Single use; repeated sends fail without sending again. Builds through the shared request core. |
+| Result checks | Require2xx, RequireStatus | First failure stops subsequent work and closes any owned response. Status checking is explicit. |
+| Result terminals | Text, Bytes, DecodeJSON[T], DecodeJSONInto, Discard | Consume once and close on both success and failure; return the first error. Discard closes without unbounded draining. |
+| Response escape | Response() | Transfers ownership to the caller, who must close the response. The Result can no longer consume or close it. |
+| Explicit cleanup | Close() | Releases an unconsumed Result without reading it. A chain abandoned after Send still requires cleanup. |
+
+Further contract decisions:
+
+- Builder and Result instances must not be copied or used concurrently. Reusing a
+  terminal or transferred Result fails without touching the response again;
+  repeated Close is harmless. A successful Send consumes the builder, as does a
+  failed Send attempt.
+- Methods after a recorded error do no work. Go still evaluates their arguments
+  before calling them; argument-expression side effects cannot be short-circuited.
+- JSON and form setters encode a snapshot; header and query setters copy values.
+  Reader bodies remain one-shot streams, and path-based files open at Send time.
+  A second body source is an error in the new builder only. Old RequestOptions
+  retain their existing replacement and form-merging rules.
+- A caller retains ownership of an accepted Reader before Send. Calling Send
+  transfers ownership of accepted closers to the library, even if building or
+  sending fails. Configuration alone does not open or close external resources.
+  A setter skipped because of an earlier error does not take ownership of its input.
+- Builder failures are not sent. Result failures retain the first error and its
+  identity; cleanup errors only become the returned error if no earlier error
+  exists. Status errors retain response metadata without buffering an unlimited
+  error body. Exact error types will be introduced with their implementing stage.
+- Existing Response methods continue to consume a stream without caching or
+  automatic closing. Automatic closing applies only to the new Result terminals.
+- There is no implicit retry, default status rejection, base URL resolution, or
+  garbage-collection-based cleanup. Request URLs follow net/http semantics.
+
+Stages 3 and 4 will implement these types and methods. Streaming upload and file
+save terminals remain later work; they are not required for the initial fluent API.
+
 License
 =======
 

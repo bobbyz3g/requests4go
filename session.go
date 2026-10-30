@@ -14,12 +14,16 @@
 package requests4go
 
 import (
-	"golang.org/x/net/publicsuffix"
+	"context"
 	"net/http"
 	"net/http/cookiejar"
+
+	"golang.org/x/net/publicsuffix"
 )
 
 // Session allows user use cookies between HTTP requests.
+// Configure Client before concurrent use. Replacing Client between requests is
+// supported; a nil Client uses the package's shared client without a cookie jar.
 type Session struct {
 	Client *http.Client
 }
@@ -35,73 +39,49 @@ func NewSession() *Session {
 
 // Get sends a GET request, returns Response struct.
 func (s *Session) Get(url string, opts ...RequestOption) (*Response, error) {
-	req, err := NewRequest("GET", url, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return s.do(req)
+	return s.Request(context.Background(), http.MethodGet, url, opts...)
 }
 
 // Put sends a PUT request, returns Response struct.
 func (s *Session) Put(url string, opts ...RequestOption) (*Response, error) {
-	req, err := NewRequest("PUT", url, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return s.do(req)
+	return s.Request(context.Background(), http.MethodPut, url, opts...)
 }
 
 // Post sends a POST request, returns Response struct.
 func (s *Session) Post(url string, opts ...RequestOption) (*Response, error) {
-	req, err := NewRequest("POST", url, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return s.do(req)
+	return s.Request(context.Background(), http.MethodPost, url, opts...)
 }
 
 // Delete sends a DELETE request, returns Response struct.
 func (s *Session) Delete(url string, opts ...RequestOption) (*Response, error) {
-	req, err := NewRequest("DELETE", url, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return s.do(req)
+	return s.Request(context.Background(), http.MethodDelete, url, opts...)
 }
 
 // Patch sends a PATCH request, returns Response struct.
 func (s *Session) Patch(url string, opts ...RequestOption) (*Response, error) {
-	req, err := NewRequest("PATCH", url, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return s.do(req)
+	return s.Request(context.Background(), http.MethodPatch, url, opts...)
 }
 
 // Head sends a HEAD request, returns Response struct.
 func (s *Session) Head(url string, opts ...RequestOption) (*Response, error) {
-	req, err := NewRequest("HEAD", url, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return s.do(req)
+	return s.Request(context.Background(), http.MethodHead, url, opts...)
 }
 
 // Options sends a OPTIONS request, returns Response struct.
 func (s *Session) Options(url string, opts ...RequestOption) (*Response, error) {
-	req, err := NewRequest("OPTIONS", url, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return s.do(req)
+	return s.Request(context.Background(), http.MethodOptions, url, opts...)
 }
 
-func (s *Session) do(req *http.Request) (*Response, error) {
-	resp, err := s.Client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	return NewResponse(resp), nil
+// Request builds and sends a request with ctx using the session's current Client.
+// Its construction, status and response ownership rules are those of Client.Request.
+func (s *Session) Request(ctx context.Context, method, url string, opts ...RequestOption) (*Response, error) {
+	return NewClient(s.Client).Request(ctx, method, url, opts...)
+}
+
+// Do sends a prepared request using the session's current Client and cookie jar.
+// Its status and response ownership rules are those of Client.Do.
+func (s *Session) Do(req *http.Request) (*Response, error) {
+	return NewClient(s.Client).Do(req)
 }
 
 func getDefaultJar() *cookiejar.Jar {
