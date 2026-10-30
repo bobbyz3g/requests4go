@@ -312,8 +312,10 @@ func TestResponse_JSON(t *testing.T) {
 		resp := NewResponse(hresp)
 		var data respData
 
-		if err := resp.JSON(&data); err != nil && err.Error() != tc.Err.Error() {
-			t.Errorf("#%s: Error = %v want error = %s", name, err, tc.Err)
+		if err := resp.JSON(&data); (err == nil) != (tc.Err == nil) {
+			t.Errorf("#%s: Error = %v want error = %v", name, err, tc.Err)
+		} else if err != nil && err.Error() != tc.Err.Error() {
+			t.Errorf("#%s: Error = %v want error = %v", name, err, tc.Err)
 		}
 
 		if data != tc.Data {

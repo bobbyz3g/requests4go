@@ -19,6 +19,7 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
+	"mime"
 	"net/http"
 	"os"
 )
@@ -45,12 +46,9 @@ func (r *Response) Ok() bool {
 	return r.StatusCode < 400 && r.StatusCode >= 200
 }
 
-// Close is to support io.ReadCloser.
+// Close closes the response body without reading the remaining content.
+// Callers must close the response when finished, even after reading to EOF.
 func (r *Response) Close() error {
-	_, err := io.Copy(ioutil.Discard, r)
-	if err != nil {
-		return err
-	}
 	if r.Body == nil {
 		return nil
 	}
@@ -94,11 +92,13 @@ func (r *Response) SaveContent(filename string) error {
 	return nil
 }
 
-// JSON reads body of response and unmarshal the response content to v.
+// JSON reads the response body and unmarshals its JSON content into v.
+// The Content-Type must be application/json, optionally with media type parameters.
+// Otherwise JSON returns ErrNotJSONContent without consuming the body.
 func (r *Response) JSON(v interface{}) error {
-	ct := r.Header.Get("Content-Type")
-	if ct != AppJSON {
-		return errors.New("content type not application/json")
+	ct, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
+	if err != nil || ct != AppJSON {
+		return ErrNotJSONContent
 	}
 	content, err := r.Content()
 	if err != nil {

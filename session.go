@@ -80,7 +80,7 @@ func (s *Session) Patch(url string, opts ...RequestOption) (*Response, error) {
 
 // Head sends a HEAD request, returns Response struct.
 func (s *Session) Head(url string, opts ...RequestOption) (*Response, error) {
-	req, err := NewRequest("POST", url, opts...)
+	req, err := NewRequest("HEAD", url, opts...)
 	if err != nil {
 		return nil, err
 	}

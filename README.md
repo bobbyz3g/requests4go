@@ -31,7 +31,12 @@ func main() {
 		log.Fatal(err.Error())
 	}
 
-	txt, _ := r.Text()
+	defer r.Close()
+	txt, err := r.Text()
+	if err != nil {
+		log.Print(err)
+		return
+	}
 	log.Println(txt)
 }
 ~~~
@@ -52,32 +57,57 @@ func main() {
 	data := requests4go.JSON(requests4go.M{"key": "value"})
 	r, err := requests4go.Post("http://httpbin.org/post", data)
 	
-	// handle r and err
+	if err != nil {
+		log.Print(err)
+		return
+	}
+	defer r.Close()
+	log.Println(r.Status)
 }
 ```
 
 ### Passing Parameters In URLS
 
+The snippets below are intended for functions that return an error, unless a full
+package is shown.
+
 ```go
 params := requests4go.Params(requests4go.M{"key1": "value1", "key2": "value2"})
 r, err := requests4go.Get("http://httpbin.org/get", params)
+if err != nil {
+	return err
+}
+defer r.Close()
 ```
 
 ### Custom Headers
 
 ```go
-	headers := requests4go.Headers(requests4go.M{"key1": "value1", "key2": "value2"})
+headers := requests4go.Headers(requests4go.M{"key1": "value1", "key2": "value2"})
 
-	r, err := requests4go.Get("http://httpbin.org/get", headers)
+r, err := requests4go.Get("http://httpbin.org/get", headers)
+if err != nil {
+	return err
+}
+defer r.Close()
 ```
 
 ### Response Content
 
-We can read the content of the server's response.
+Read the response body with `Text`, `Content`, or a decoding method. These methods
+consume the body without caching or closing it. Always close the response when
+finished. `Close` closes the body without reading the remaining content.
 
 ~~~go
-resp, _ := requests4go.Get("https://httpbin.org/get", nil)
-txt, _ := resp.Text()
+resp, err := requests4go.Get("https://httpbin.org/get")
+if err != nil {
+	return err
+}
+defer resp.Close()
+txt, err := resp.Text()
+if err != nil {
+	return err
+}
 log.Println(txt)
 ~~~
 
@@ -85,35 +115,51 @@ log.Println(txt)
 
 There are two methods to handle JSON response content.
 
-1. We can unmarshal the struct by using JSON.
+1. Decode into a Go value using JSON.
 
 ```go
-foo := &Foo{}
-resp, _ := requests4go.Get("https://example.com")
-j, _ := resp.JSON(&foo)
+var foo map[string]any
+resp, err := requests4go.Get("https://httpbin.org/json")
+if err != nil {
+	return err
+}
+defer resp.Close()
+if err := resp.JSON(&foo); err != nil {
+	return err
+}
 fmt.Printf("%v\n", foo)
 ```
 
-2. Struct implements Unmarshaler.
+2. Implement Unmarshaler on a custom type.
 
 ```go
 package foo
 
-type Foo struct {}
+import (
+	"encoding/json"
+	"fmt"
 
-type (f *Foo) Unmarshal(p []byte) error {
-	// ... unmarshal logic
-	return nil
+	"github.com/Kaiser925/requests4go"
+)
+
+type Foo map[string]any
+
+func (f *Foo) Unmarshal(p []byte) error {
+	return json.Unmarshal(p, f)
 }
 
-func F() {
-	f := &Foo{}
-	resp, _ := requests4go.Get("https://example.com")
-	err := resp.Unmarshal(f)
+func F() error {
+	var f Foo
+	resp, err := requests4go.Get("https://httpbin.org/json")
 	if err != nil {
-		// error handle
-    }
-	fmt.Printf("%v\n", foo)
+		return err
+	}
+	defer resp.Close()
+	if err := resp.Unmarshal(&f); err != nil {
+		return err
+	}
+	fmt.Printf("%v\n", f)
+	return nil
 }
 ```
 

@@ -138,7 +138,8 @@ func Cookies(c map[string]string) RequestOption {
 	}
 }
 
-// Data sends form-encoded data.
+// Data sends form-encoded data. Repeated Data options merge fields,
+// with later values replacing earlier values for the same key.
 func Data(form map[string]string) RequestOption {
 	return func(req *http.Request) error {
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -148,7 +149,7 @@ func Data(form map[string]string) RequestOption {
 		for k, v := range form {
 			req.PostForm.Set(k, v)
 		}
-		return nil
+		return setRequestBody(req, strings.NewReader(req.PostForm.Encode()))
 	}
 }
 
@@ -160,36 +161,13 @@ func Body(body io.Reader) RequestOption {
 }
 
 func setRequestBody(req *http.Request, body io.Reader) error {
-	rc, ok := body.(io.ReadCloser)
-	if !ok && body != nil {
-		rc = io.NopCloser(body)
+	// Let net/http keep length, replay and empty-body semantics consistent.
+	bodyReq, err := http.NewRequestWithContext(req.Context(), req.Method, req.URL.String(), body)
+	if err != nil {
+		return err
 	}
-	req.Body = rc
-	switch v := body.(type) {
-	case *bytes.Buffer:
-		req.ContentLength = int64(v.Len())
-		buf := v.Bytes()
-		req.GetBody = func() (io.ReadCloser, error) {
-			r := bytes.NewReader(buf)
-			return io.NopCloser(r), nil
-		}
-	case *bytes.Reader:
-		req.ContentLength = int64(v.Len())
-		snapshot := *v
-		req.GetBody = func() (io.ReadCloser, error) {
-			r := snapshot
-			return io.NopCloser(&r), nil
-		}
-	case *strings.Reader:
-		req.ContentLength = int64(v.Len())
-		snapshot := *v
-		req.GetBody = func() (io.ReadCloser, error) {
-			r := snapshot
-			return io.NopCloser(&r), nil
-		}
-	default:
-		// See comment of http.NewRequestWithContext
-	}
-
+	req.Body = bodyReq.Body
+	req.ContentLength = bodyReq.ContentLength
+	req.GetBody = bodyReq.GetBody
 	return nil
 }
