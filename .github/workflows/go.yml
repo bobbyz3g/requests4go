@@ -5,12 +5,21 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ master ]
+  workflow_dispatch:
 
 jobs:
 
   build:
-    name: Build
-    runs-on: ubuntu-latest
+    name: Test (${{ matrix.os }}, ${{ matrix.go }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        go: [module]
+        include:
+          - os: ubuntu-latest
+            go: stable
     steps:
 
     - name: Check out code
@@ -19,13 +28,24 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v7.0.0
       with:
+        go-version: ${{ matrix.go == 'stable' && 'stable' || '' }}
         go-version-file: go.mod
 
     - name: Get dependencies
       run: go mod download
 
     - name: Test
-      run: go test -race ./...
+      run: go test -count=1 -timeout=2m ./...
+
+    - name: Race
+      if: runner.os == 'Linux'
+      run: go test -race -count=1 -timeout=2m ./...
 
     - name: Vet
       run: go vet ./...
+
+    - name: Verify modules
+      run: go mod verify
+
+    - name: Check module files
+      run: go mod tidy -diff

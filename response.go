@@ -79,17 +79,19 @@ func (r *Response) Content() ([]byte, error) {
 }
 
 // SaveContent reads body of response and saves response body to file.
+// It truncates an existing file and may leave partial content on failure.
+// The caller remains responsible for closing the response.
 func (r *Response) SaveContent(filename string) error {
 	f, err := os.Create(filename)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
-
-	if _, err := io.Copy(f, r.Body); err != nil {
+	_, err = io.Copy(f, r.Body)
+	closeErr := f.Close()
+	if err != nil {
 		return err
 	}
-	return nil
+	return closeErr
 }
 
 // JSON reads the response body and unmarshals its JSON content into v.

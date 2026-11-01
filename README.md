@@ -5,6 +5,9 @@
 
 Go HTTP Requests. ✨🎉✨ Send requests quickly and humanely.
 
+Requires Go 1.27.3 or newer. The module path remains
+`github.com/Kaiser925/requests4go`, including when using this fork.
+
 Quick Start
 =======
 
@@ -280,7 +283,7 @@ Type and syntax errors retain their standard library identities. Into may partly
 modify dst on a decoding error; the generic method returns the zero value on error.
 `Discard()` closes without draining the body and returns the first error.
 
-Read terminals default to unlimited size. `LimitBody(n)` explicitly bounds bytes
+Read and save terminals default to unlimited size. `LimitBody(n)` explicitly bounds bytes
 read from Body (after automatic decompression), including JSON whitespace. It reads
 at most n+1 bytes to detect overflow, returns `ErrResponseTooLarge`, and closes the
 body. Zero permits only an empty body; a negative value records an error and closes
@@ -297,10 +300,10 @@ The minimal surface and ownership rules are:
 
 | Stage | Operations | Contract |
 | --- | --- | --- |
-| RequestBuilder (available) | Request, Get/Post/etc., Header, Headers, Query, JSON, Form, Body | Mutable, per-request, not safe for concurrent use. Retains its context and first error. No network activity before Send. |
+| RequestBuilder (available) | Request, Get/Post/etc., Header, Headers, Query, JSON, Form, Body, File, Multipart | Mutable, per-request, not safe for concurrent use. Retains its context and first error. No network activity before Send. |
 | Send (available) | Returns a non-nil Result, including on error | Single use; repeated sends fail without sending again. Builds through the shared request core. |
 | Result checks (available) | Require2xx, RequireStatus, LimitBody | First failure stops subsequent work and closes any owned response. Status checking and size limits are explicit. |
-| Result terminals (available) | Text, Bytes, DecodeJSON[T], DecodeJSONInto, Discard | Consume once and close on both success and failure; return the first error. Discard closes without unbounded draining. |
+| Result terminals (available) | Text, Bytes, DecodeJSON[T], DecodeJSONInto, Discard, Save | Consume once and close on both success and failure; return the first error. Discard closes without unbounded draining. |
 | Response escape (available) | Response() | Transfers ownership to the caller, who must close the response. The Result can no longer consume or close it. |
 | Explicit cleanup (available) | Close() | Releases an unconsumed Result without reading it. A chain abandoned after Send still requires cleanup. |
 
@@ -314,7 +317,7 @@ Further contract decisions:
   before calling them; argument-expression side effects cannot be short-circuited.
 - JSON and form setters encode a snapshot; header and query setters copy values.
   Reader bodies retain standard library replay support for bytes/string readers;
-  arbitrary streams are not made replayable. Future path-based files open at Send time.
+  arbitrary streams are not made replayable. File paths open at Send time.
   A second body source is an error in the new builder only. Old RequestOptions
   retain their existing replacement and form-merging rules.
 - A caller retains ownership of an accepted Reader before Send. Calling Send
@@ -330,8 +333,94 @@ Further contract decisions:
 - There is no implicit retry, default status rejection, base URL resolution, or
   garbage-collection-based cleanup. Request URLs follow net/http semantics.
 
-Streaming upload helpers and file save terminals remain later work; they are not
-required for the initial fluent API.
+### Streaming uploads
+
+Use `File(path)` for a raw file body. It opens the path only during Send and closes
+it through the HTTP client's lifecycle. It does not infer a Content-Type.
+`Multipart(parts...)` supports ordered fields, memory-backed files and repeated
+file names without buffering entire payloads:
+
+```go
+client := requests4go.NewClient(nil)
+err := client.NewRequest(ctx).Post("https://httpbin.org/post").Multipart(
+    requests4go.Part{Name: "title", Body: strings.NewReader("Reports")},
+    requests4go.Part{Name: "files", Filename: "one.txt", ContentType: "text/plain", Body: strings.NewReader("first")},
+    requests4go.Part{Name: "files", Filename: "two.txt", Body: strings.NewReader("second")},
+).Send().Require2xx().Discard()
+if err != nil {
+    return err
+}
+```
+
+This snippet uses `strings`. To stream an existing file in a multipart part, pass
+an open `*os.File` as Body. Each accepted part's closer transfers to the library
+at Send, including when construction fails. Before Send, the caller still owns
+the readers. Rejected or skipped parts remain caller-owned. Use a separate reader
+for each part. Readers that may block must allow Close to interrupt Read; arbitrary
+blocking non-closable readers cannot be forcibly canceled by this library.
+Request body closing follows net/http and may finish asynchronously; its close
+errors are not promoted to response errors. Upload read errors propagate through Do.
+
+Multipart buffers only framing metadata and reads payloads sequentially. It does
+not launch producer goroutines. File and multipart bodies have unknown length
+(HTTP/1.1 normally uses chunked transfer) and no GetBody replay function: 307/308
+redirects requiring replay are returned to the caller. Standard 301/302/303 policies
+still apply. Create a fresh builder and fresh readers for another attempt. The old
+`FileContent` and `MultipartForm` options retain their existing buffered behavior.
+
+### Saving responses
+
+```go
+client := requests4go.NewClient(nil)
+err := client.NewRequest(ctx).Get("https://httpbin.org/bytes/1024").Send().
+    Require2xx().LimitBody(10 << 20).Save("download.bin")
+if err != nil {
+    return err
+}
+```
+
+Save streams to a temporary file in the target directory. Only after transfer,
+file close and response close succeed does it rename the temporary file to the
+target. Earlier failures leave an existing target unchanged and attempt to remove
+the temporary file. Replacement follows the host's `os.Rename` semantics; rename
+failure is returned. The directory must exist. The new file uses mode 0600 where
+supported, does not preserve old permissions, and is not fsynced for crash durability.
+Save consumes the Result and observes LimitBody without buffering the whole file.
+Use an explicit status check if non-success response bodies must not be saved.
+
+Legacy `Response.SaveContent` keeps its direct-create/truncate behavior, may leave
+a partial file on error, and leaves response closing to the caller. It now reports
+file close failures. For custom download writers or progress reporting, transfer
+the Response and use its Body with `io.Copy`; the caller then owns all cleanup.
+
+### Compatibility and validation
+
+Existing package functions, RequestOption signatures and Session methods remain
+available. Response reads still consume a stream; they do not cache or automatically
+close it. JSON encoding continues to use encoding/json semantics. New behavior is
+provided through Client, RequestBuilder and Result, rather than replacing old APIs.
+
+CI runs tests and vet on Linux, Windows and macOS at the go.mod toolchain version,
+plus latest stable Go on Linux. Linux runs the race detector. Module checks verify
+checksums and that go.mod/go.sum are tidy. Runnable examples and external-package
+legacy API tests are included in `go test ./...`. Cross-compilation alone does not
+substitute for running platform tests.
+
+Before a release, require successful CI for the exact commit and run
+`go run golang.org/x/vuln/cmd/govulncheck@latest ./...`. Review any Dependabot alerts
+alongside scanner results; inability to access the database is not a clean scan.
+
+### Unreleased changes
+
+- Raised the Go baseline to 1.27.3 and updated dependencies and CI actions.
+- Fixed form encoding, Session.Head, stale body length/replay metadata, JSON media
+  type parameters, and response closing without unbounded draining.
+- Added configurable Client and context-aware Request/Do entrypoints for Session.
+- Added single-use fluent request building, typed JSON response decoding, explicit
+  status checks, response size limits, and automatic-closing Result terminals.
+- Added streaming file/multipart uploads and staged response file saving.
+- Existing API signatures and the module path are preserved. Callers relying on
+  the previous erroneous form/HEAD/Close behavior should review the fixes above.
 
 License
 =======

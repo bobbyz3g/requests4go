@@ -84,7 +84,7 @@ func (r *Result) require(ok bool) *Result {
 	return r
 }
 
-// LimitBody limits the bytes read by Text, Bytes and JSON terminals, including
+// LimitBody limits the bytes read by Text, Bytes, Save and JSON terminals, including
 // JSON whitespace. It applies to bytes exposed by Body, after any automatic
 // decompression. Reading one extra byte detects overflow and returns
 // ErrResponseTooLarge. Zero accepts only an empty body. A negative limit records
@@ -127,12 +127,7 @@ func (r *Result) readBody(resp *Response) ([]byte, error) {
 		return data, nil
 	}
 	// Probe separately so even MaxInt64 does not overflow when adding one.
-	var extra [1]byte
-	n, err := io.ReadFull(resp.Body, extra[:])
-	if n != 0 {
-		return nil, ErrResponseTooLarge
-	}
-	if err != io.EOF {
+	if err := checkBodyOverflow(resp.Body); err != nil {
 		return nil, err
 	}
 	return data, nil

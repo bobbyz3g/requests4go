@@ -22,16 +22,17 @@ var ErrBodyAlreadySet = errors.New("request body has already been set")
 // It must not be copied or used concurrently. Setters retain the first error;
 // subsequent setters do nothing. Setters also do nothing after Send.
 type RequestBuilder struct {
-	client  *Client
-	ctx     context.Context
-	method  string
-	url     string
-	headers http.Header
-	query   url.Values
-	body    io.Reader
-	bodySet bool
-	err     error
-	sent    bool
+	client   *Client
+	ctx      context.Context
+	method   string
+	url      string
+	headers  http.Header
+	query    url.Values
+	body     io.Reader
+	openBody func() (io.ReadCloser, error)
+	bodySet  bool
+	err      error
+	sent     bool
 }
 
 // NewRequest starts a builder without sending a request. ctx must not be nil.
@@ -181,6 +182,12 @@ func (b *RequestBuilder) Send() *Result {
 		}
 	}
 	var req *http.Request
+	if b.err == nil && b.openBody != nil {
+		if b.err = b.ctx.Err(); b.err == nil {
+			b.body, b.err = b.openBody()
+		}
+		b.openBody = nil
+	}
 	if b.err == nil {
 		req, b.err = NewRequestWithContext(b.ctx, b.method, b.url, func(req *http.Request) error {
 			req.Header = b.headers.Clone()
