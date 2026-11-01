@@ -1,5 +1,7 @@
 # request4go
 
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 ![test](https://github.com/Kaiser925/requests4go/workflows/test/badge.svg)
 [![Go Reference](https://pkg.go.dev/badge/github.com/Kaiser925/requests4go.svg)](https://pkg.go.dev/github.com/Kaiser925/requests4go)
 
@@ -393,34 +395,12 @@ a partial file on error, and leaves response closing to the caller. It now repor
 file close failures. For custom download writers or progress reporting, transfer
 the Response and use its Body with `io.Copy`; the caller then owns all cleanup.
 
-### Compatibility and validation
+### Compatibility
 
-Existing package functions, RequestOption signatures and Session methods remain
-available. Response reads still consume a stream; they do not cache or automatically
-close it. JSON encoding continues to use encoding/json semantics. New behavior is
-provided through Client, RequestBuilder and Result, rather than replacing old APIs.
-
-CI runs tests and vet on Linux, Windows and macOS at the go.mod toolchain version,
-plus latest stable Go on Linux. Linux runs the race detector. Module checks verify
-checksums and that go.mod/go.sum are tidy. Runnable examples and external-package
-legacy API tests are included in `go test ./...`. Cross-compilation alone does not
-substitute for running platform tests.
-
-Before a release, require successful CI for the exact commit and run
-`go run golang.org/x/vuln/cmd/govulncheck@latest ./...`. Review any Dependabot alerts
-alongside scanner results; inability to access the database is not a clean scan.
-
-### Unreleased changes
-
-- Raised the Go baseline to 1.27.3 and updated dependencies and CI actions.
-- Fixed form encoding, Session.Head, stale body length/replay metadata, JSON media
-  type parameters, and response closing without unbounded draining.
-- Added configurable Client and context-aware Request/Do entrypoints for Session.
-- Added single-use fluent request building, typed JSON response decoding, explicit
-  status checks, response size limits, and automatic-closing Result terminals.
-- Added streaming file/multipart uploads and staged response file saving.
-- Existing API signatures and the module path are preserved. Callers relying on
-  the previous erroneous form/HEAD/Close behavior should review the fixes above.
+Requires Go 1.27.3 or newer. We preserve existing public API signatures and
+documented behavior, while fixing bugs that violate those contracts. New features
+are added through new APIs; existing package functions, RequestOption and Session
+remain supported.
 
 License
 =======
