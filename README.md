@@ -247,19 +247,51 @@ transfers ownership, Result.Close is harmless and the caller must close the resp
 Repeated Response calls return `ErrResultConsumed`; a stored failure is returned
 unchanged. A zero Result is empty and a RequestBuilder must be created by NewRequest.
 
-### Fluent response design (next stage)
+### Fluent response reading
 
-RequestBuilder, Send, Result.Response and Result.Close are implemented. Stage 4
-will add status checks and automatic-closing read terminals. The intended shape is:
+Status checks are explicit. Read terminals consume and close the response on both
+success and failure, so this chain does not need a separate Close:
 
-```text
+```go
+client := requests4go.NewClient(nil)
 value, err := client.NewRequest(ctx).
-    Post(url).
-    JSON(payload).
+    Post("https://httpbin.org/post").
+    JSON(map[string]any{"name": "Alice"}).
     Send().
     Require2xx().
-    DecodeJSON[Value]()
+    LimitBody(1 << 20).
+    DecodeJSON[map[string]any]()
+if err != nil {
+    return err
+}
+fmt.Println(value)
 ```
+
+`Require2xx()` accepts 200–299; `RequireStatus(code)` accepts exactly that code.
+On rejection, the Result stores a `*StatusError` with StatusCode, Status and a
+Header snapshot, then closes without reading the body. Use `errors.As` to inspect
+it. No response body is retained in the error, and later chain operations do no work.
+
+`Bytes()` and `Text()` return the complete body; Text does not perform charset
+conversion. `DecodeJSON[T]()` returns a typed value, and `DecodeJSONInto(dst)` fills
+an existing non-nil pointer. Both use `encoding/json`, require `application/json`
+(parameters such as charset are allowed), and reject trailing non-whitespace data.
+Type and syntax errors retain their standard library identities. Into may partly
+modify dst on a decoding error; the generic method returns the zero value on error.
+`Discard()` closes without draining the body and returns the first error.
+
+Read terminals default to unlimited size. `LimitBody(n)` explicitly bounds bytes
+read from Body (after automatic decompression), including JSON whitespace. It reads
+at most n+1 bytes to detect overflow, returns `ErrResponseTooLarge`, and closes the
+body. Zero permits only an empty body; a negative value records an error and closes
+without reading. A later valid limit replaces an earlier limit. Limits do not apply
+to responses transferred by `Response()`; callers control those reads themselves.
+Use a context deadline or client timeout to bound waiting as well as size.
+
+Successful terminals consume the Result once. Further reads return
+`ErrResultConsumed`; after a failure, later operations retain that first error.
+Read/decoding/status errors take precedence over cleanup errors. If only closing
+fails, that error is returned; Bytes/Text/generic JSON return a zero result on error.
 
 The minimal surface and ownership rules are:
 
@@ -267,8 +299,8 @@ The minimal surface and ownership rules are:
 | --- | --- | --- |
 | RequestBuilder (available) | Request, Get/Post/etc., Header, Headers, Query, JSON, Form, Body | Mutable, per-request, not safe for concurrent use. Retains its context and first error. No network activity before Send. |
 | Send (available) | Returns a non-nil Result, including on error | Single use; repeated sends fail without sending again. Builds through the shared request core. |
-| Result checks (planned) | Require2xx, RequireStatus | First failure stops subsequent work and closes any owned response. Status checking is explicit. |
-| Result terminals (planned) | Text, Bytes, DecodeJSON[T], DecodeJSONInto, Discard | Consume once and close on both success and failure; return the first error. Discard closes without unbounded draining. |
+| Result checks (available) | Require2xx, RequireStatus, LimitBody | First failure stops subsequent work and closes any owned response. Status checking and size limits are explicit. |
+| Result terminals (available) | Text, Bytes, DecodeJSON[T], DecodeJSONInto, Discard | Consume once and close on both success and failure; return the first error. Discard closes without unbounded draining. |
 | Response escape (available) | Response() | Transfers ownership to the caller, who must close the response. The Result can no longer consume or close it. |
 | Explicit cleanup (available) | Close() | Releases an unconsumed Result without reading it. A chain abandoned after Send still requires cleanup. |
 
@@ -292,7 +324,7 @@ Further contract decisions:
 - Builder failures are not sent. Result failures retain the first error and its
   identity; cleanup errors only become the returned error if no earlier error
   exists. Status errors retain response metadata without buffering an unlimited
-  error body. Exact error types will be introduced with their implementing stage.
+  error body.
 - Existing Response methods continue to consume a stream without caching or
   automatic closing. Automatic closing applies only to the new Result terminals.
 - There is no implicit retry, default status rejection, base URL resolution, or
